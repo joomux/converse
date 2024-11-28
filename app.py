@@ -537,37 +537,34 @@ def handle_channel_selection(ack, body, client, logger, returner=False):
         
         # Get channel members
         try:
+            channel_info = client.conversations_info(channel=selected_channel)
             members = client.conversations_members(channel=selected_channel)["members"]
-            
             # If bot is not a member
             if bot_user_id not in members:
                 # Check if channel is private
-                channel_info = client.conversations_info(channel=selected_channel)
-                if channel_info["channel"]["is_private"]:
-                    # Show error modal for private channel
-                    client.views_open(
-                        trigger_id=body["trigger_id"],
-                        view={
-                            "type": "modal",
-                            "title": {
-                                "type": "plain_text",
-                                "text": "Access Error"
-                            },
-                            "blocks": [
-                                {
-                                    "type": "section",
-                                    "text": {
-                                        "type": "mrkdwn",
-                                        "text": "❌ Unable to access this private channel. Please add the bot to the channel first."
-                                    }
-                                }
-                            ]
+                client.conversations_join(channel=selected_channel)
+        except SlackApiError as e:
+            logger.error(f"Error checking channel membership: {e}")
+            client.views_open(
+                trigger_id=body["trigger_id"],
+                view={
+                    "type": "modal",
+                    "title": {
+                        "type": "plain_text",
+                        "text": "Access Error"
+                    },
+                    "blocks": [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "❌ Unable to access this private channel. Please add the bot to the channel first."
+                            }
                         }
-                    )
-                    return
-                else:
-                    # Join public channel
-                    client.conversations_join(channel=selected_channel)
+                    ]
+                }
+            )
+            return
         except Exception as e:
             logger.error(f"Error checking channel membership: {e}")
             raise
