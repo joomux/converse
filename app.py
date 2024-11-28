@@ -284,19 +284,21 @@ def handle_channel_creator_submission(ack, body, client, view, logger):
 def handle_generate_canvas(ack, body, client, logger):
     ack()
     try:
-        # Get the selected channel from the private metadata
         selected_channel = body["actions"][0]["value"]
         logger.info(f"Generating canvas for channel: {selected_channel}")
 
-        # TODO: Add canvas generation logic here
-        # Get channel info
-        try:
-             # Update the home tab to show generation in progress
-            progress_view = {
-                "type": "home",
+        # Update the modal to show generation in progress
+        client.views_update(
+            view_id=body["container"]["view_id"],
+            view={
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Generating Canvas"
+                },
                 "blocks": [
                     {
-                        "type": "section", 
+                        "type": "section",
                         "text": {
                             "type": "mrkdwn",
                             "text": f"🎨 Generating canvas for <#{selected_channel}>...\nThis may take a few moments."
@@ -304,11 +306,10 @@ def handle_generate_canvas(ack, body, client, logger):
                     }
                 ]
             }
-            
-            client.views_publish(
-                user_id=body["user"]["id"],
-                view=progress_view
-            )
+        )
+
+        # Get channel info
+        try:
             channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
             channel_details = channel_info["channel"]
             
@@ -462,6 +463,18 @@ def handle_generate_canvas(ack, body, client, logger):
 
             logger.info(canvas_result)
 
+            # After successful canvas generation, refresh the channel details modal
+            channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
+            channel = channel_info["channel"]
+            history = client.conversations_history(channel=selected_channel, limit=1)
+            
+            # Reopen the channel details modal with updated info
+            handle_channel_selection(ack, {
+                "trigger_id": body["trigger_id"],
+                "actions": [{"selected_conversation": selected_channel}],
+                "user": {"id": body["user"]["id"]},
+                "container": {"view_id": body["container"]["view_id"]}
+            }, client, logger, returner=True)
 
         except SlackApiError as e:
             logger.error(f"Error getting channel info: {e}")
@@ -489,26 +502,31 @@ def handle_generate_canvas(ack, body, client, logger):
 
     except Exception as e:
         logger.error(f"Error generating canvas: {e}")
-        error_view = {
-            "type": "home",
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn", 
-                        "text": f"❌ Error: Unable to generate canvas.\nDetails: {str(e)}"
+        # Show error in the modal instead of home view
+        client.views_update(
+            view_id=body["container"]["view_id"],
+            view={
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Error"
+                },
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"❌ Error: Unable to generate canvas.\nDetails: {str(e)}"
+                        }
                     }
-                }
-            ]
-        }
-        client.views_publish(
-            user_id=body["user"]["id"],
-            view=error_view
+                ]
+            }
         )
 
 @app.action("selected_channel")
-def handle_channel_selection(ack, body, client, logger):
-    ack()
+def handle_channel_selection(ack, body, client, logger, returner=False):
+    if not returner:
+        ack()
     try:
         # Get selected channel ID
         selected_channel = body["actions"][0]["selected_conversation"]
@@ -567,10 +585,8 @@ def handle_channel_selection(ack, body, client, logger):
         created_date = datetime.fromtimestamp(channel["created"]).strftime("%Y-%m-%d %H:%M:%S")
         last_message_date = datetime.fromtimestamp(float(last_message)).strftime("%Y-%m-%d %H:%M:%S") if last_message != "No messages" else "Never"
         
-        # Open modal with channel details
-        client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
+        
+        view_data={
                 "type": "modal",
                 "title": {
                     "type": "plain_text",
@@ -669,8 +685,18 @@ def handle_channel_selection(ack, body, client, logger):
                     }
                 ]
             }
-        )
         
+        if not returner:
+            # Open modal with channel details
+            client.views_open(
+                trigger_id=body["trigger_id"],
+                view=view_data
+            )
+        else:
+            client.views_update(
+                view_id=body["container"]["view_id"],
+                view=view_data
+            )
     except Exception as e:
         logger.error(f"Error handling channel selection: {e}")
         # Send error message as ephemeral message
