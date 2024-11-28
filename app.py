@@ -1216,14 +1216,6 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
         # Extract min and max from range (e.g., "5-10" becomes min=5, max=10)
         min_posts, max_posts = map(int, num_posts.split('-'))
         total_posts = random.randint(min_posts, max_posts)
-
-        # view_body = _get_conversation_progress_view(data=conversation_params, total=total_posts, current=0)
-
-        # # Show loading state
-        # original_view_info = client.views_open(
-        #     trigger_id=body["trigger_id"],
-        #     view=view_body
-        # )
         
         generated_posts = []
         for i in range(total_posts):
@@ -1280,7 +1272,7 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
                             client.reactions_add(
                                 channel=selected_channel,
                                 timestamp=main_post["ts"],
-                                name=reaction
+                                name=reaction.strip(':')
                             )
                         except Exception as e:
                             logger.error(f"Error adding reaction {reaction} to post {main_post['ts']}: {e}")
@@ -1321,7 +1313,7 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
                                     client.reactions_add(
                                         channel=selected_channel,
                                         timestamp=reply_post["ts"],
-                                        name=reaction
+                                        name=reaction.strip(':')
                                     )
                                 except Exception as e:
                                     logger.error(f"Error adding reaction {reaction} to reply post {reply_post['ts']}: {e}")
@@ -1558,6 +1550,8 @@ def _fetch_conversation(conversation_params):
 
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()  # Raise an exception for bad status codes
+
+    # TODO: handle errors better here and make sure the structure has the 'conversations' object
     
     return response.json()["content"][0]["content"][0]["input"]["conversations"]
 
