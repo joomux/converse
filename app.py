@@ -26,10 +26,17 @@ app = App(
     signing_secret=os.environ["SLACK_SIGNING_SECRET"]
 )
 
+# Add after other global variables
+user_inputs = {}  # Dictionary to store user inputs
+
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
-        # Create the home tab view
+        # Get stored values for this user
+        user_id = event["user"]
+        stored_values = user_inputs.get(user_id, {})
+        
+        # Create the home tab view with potentially stored values
         view = {
             "type": "home",
             "blocks": [
@@ -43,10 +50,11 @@ def update_home_tab(client, event, logger):
                 },
                 {
                     "type": "input",
-                    "block_id": "customer_name_input", 
+                    "block_id": "customer_name_input",
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "customer_name",
+                        "initial_value": stored_values.get("customer_name", ""),  # Add stored value
                         "placeholder": {
                             "type": "plain_text",
                             "text": "Enter customer name..."
@@ -55,7 +63,8 @@ def update_home_tab(client, event, logger):
                     "label": {
                         "type": "plain_text",
                         "text": "Customer Name"
-                    }
+                    },
+                    "optional": True
                 },
                 {
                     "type": "input",
@@ -63,6 +72,7 @@ def update_home_tab(client, event, logger):
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "use_case",
+                        "initial_value": stored_values.get("use_case", ""),  # Add stored value
                         "placeholder": {
                             "type": "plain_text",
                             "text": "Describe your use case for channel creation..."
@@ -72,7 +82,9 @@ def update_home_tab(client, event, logger):
                     "label": {
                         "type": "plain_text",
                         "text": "Use Case Description"
-                    }
+                    },
+                    "dispatch_action": True,  # Enable real-time updates
+                    "optional": False
                 },
                 {
                     "type": "actions",
@@ -180,14 +192,24 @@ def handle_generate_channels(ack, body, client, logger):
         
         # Extract values from the form
         state_values = body["view"]["state"]["values"]
+
+         # Initialize user dict if it doesn't exist
+        if user_id not in user_inputs:
+            user_inputs[user_id] = {}
         
         # Get use case description (required)
         use_case = state_values.get("use_case_input", {}).get("use_case", {}).get("value")
         if not use_case:
+            user_inputs[user_id]["use_case"] = ""
             raise ValueError("Use Case Description is required")
+        
+        user_inputs[user_id]["use_case"] = use_case
+        logger.debug(f"Stored use case for user {user_id}: {use_case}")
             
         # Get customer name (optional)
         customer_name = state_values.get("customer_name_input", {}).get("customer_name", {}).get("value")
+        user_inputs[user_id]["customer_name"] = customer_name
+        logger.debug(f"Stored customer name for user {user_id}: {customer_name}")
         
         logger.debug(f"Use Case: {use_case}")
         logger.debug(f"Customer Name: {customer_name}")
@@ -316,6 +338,13 @@ def handle_generate_channels(ack, body, client, logger):
                     users=client.auth_test()["user_id"]
                 )
 
+                # Send DM to user about channel creation
+                client.chat_postMessage(
+                    channel=user_id,
+                    text=f"✨ Created channel <#{channel_created['channel']['id']}>\n" + 
+                         (f"Description: {channel_def.get('description', 'No description provided')}")
+                )
+
             except SlackApiError as e:
                 logger.error(f"Error creating channel {channel_def['name']}: {e}")
 
@@ -412,11 +441,26 @@ def handle_generate_canvas(ack, body, client, logger):
             logger.debug(f"Purpose: {channel_purpose}") 
             logger.debug(f"Is private: {is_private}")
             logger.debug(f"Member count: {member_count}")
-            logger.debug(f"Created timestamp: {created_ts}")
+            logger.debug(f"Created timestamp: {created_ts}")         
 
             # Get member list for the channel
             members_response = client.conversations_members(channel=selected_channel)
             member_ids = members_response["members"]
+
+            # Check if bot is member of channel and join if not
+            try:
+                # Get bot's own user ID
+                bot_info = client.auth_test()
+                bot_user_id = bot_info["user_id"]
+                
+                # Check if bot is in members list
+                if bot_user_id not in member_ids:
+                    logger.info(f"Bot not in channel {channel_name}, joining now...")
+                    client.conversations_join(channel=selected_channel)
+                    logger.info(f"Successfully joined channel {channel_name}")
+            except Exception as e:
+                logger.error(f"Error checking/joining channel {channel_name}: {e}")
+                raise
             
             # Get 5 random members (or fewer if channel has less than 5 members)
             import random
@@ -446,7 +490,7 @@ def handle_generate_canvas(ack, body, client, logger):
                             f"Create a canvas for the {channel_name} channel.\n"
                             f"The channel description is: {channel_purpose}\n"
                             f"The current topic is: {channel_topic}\n"
-                            f"The following users are members of this channel: {member_string}; "
+                            f"The following users are members of this channel: {member_string} - use exacly this formate to mention them in the canvas content. "
                             "and may be used in the canvas content as key contacts. "
                             "RULE: do not nest bullet points. "
                             "RULE: use rich markdown format. "
@@ -504,11 +548,27 @@ def handle_generate_canvas(ack, body, client, logger):
                     canvas_id=channel_details.get("properties", {}).get("canvas", {}).get("file_id"),
                     changes=[{"operation": "replace", "document_content": {"type": "markdown", "markdown": content["body"]}}]
                 )
+                canvas_id = channel_details.get("properties", {}).get("canvas", {}).get("file_id")
             else:
                 canvas_result = client.conversations_canvases_create(
                     channel_id=selected_channel,
                     document_content={"type": "markdown", "markdown": content["body"]}
                 )
+                canvas_id = canvas_result["canvas_id"]
+            
+            # Get canvas file info
+            canvas_info = client.files_info(file=canvas_id)
+            logger.info(f"Canvas file info: {canvas_info['file']}")
+            
+            # Extract permalink
+            canvas_permalink = canvas_info["file"]["permalink"]
+            logger.info(f"Canvas permalink: {canvas_permalink}")
+            # Send DM to user about canvas creation/update
+            client.chat_postMessage(
+                channel=body["user"]["id"],
+                text=f"{'Updated' if do_canvas_update else 'Created'} canvas for <#{selected_channel}>\n" +
+                     f"View it here: <{canvas_permalink}|{content['title']}>"
+            )
 
             logger.info(canvas_result)
 
@@ -516,6 +576,24 @@ def handle_generate_canvas(ack, body, client, logger):
         except SlackApiError as e:
             logger.error(f"Error getting channel info: {e}")
             raise
+        except Exception as e:
+            logger.error(f"Error in canvas generation/update: {e}")
+            error_view = {
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"❌ Error: Unable to generate/update canvas.\nDetails: {str(e)}"
+                        }
+                    }
+                ]
+            }
+            client.views_publish(
+                user_id=body["user"]["id"],
+                view=error_view
+            )
         
         update_home_tab(client, {"user": body["user"]["id"]}, logger)
 
@@ -537,8 +615,6 @@ def handle_generate_canvas(ack, body, client, logger):
             user_id=body["user"]["id"],
             view=error_view
         )
-
-
 
 def main():
     try:
