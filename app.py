@@ -109,7 +109,7 @@ def update_home_tab(client, event, logger):
                     "type": "header",
                     "text": {
                         "type": "plain_text",
-                        "text": "Existing Channels with and without Canvas",
+                        "text": "Existing Channels with :white_check_mark: and without :x: Canvas",
                         "emoji": True
                     }
                 }
