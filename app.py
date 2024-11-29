@@ -238,122 +238,8 @@ def handle_channel_creator_submission(ack, body, client, view, logger):
 
         try:
 
-            url = "https://devxp-ai-api.tinyspeck.com/v1/chat/"
-
-            payload = json.dumps({
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a Slack Connect experience architect."
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"I need to design a series of Slack channels aimed to solve for "
-                            f"the following use case(s) for the company called {customer_name}: "
-                            f"{use_case}. Provided suggested channel names and descriptions. "
-                            "Use a consistent naming pattern and prefix."
-                        )
-                    }
-                ],
-                "source": "postman",
-                "max_tokens": 2048,
-                "tools": [{
-                    "name": "create_channels",
-                    "description": "Creates a set of Slack channels for a specific use case.",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {
-                            "channels": {
-                                "type": "array",
-                                "description": "The parameters to define a new channel in Slack",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "name": {
-                                            "type": "string",
-                                            "description": "The name of the channel in the format supported by Slack channel names"
-                                        },
-                                        "description": {
-                                            "type": "string",
-                                            "description": "A human-friendly description of the channel"
-                                        },
-                                        "topic": {
-                                            "type": "string",
-                                            "description": "What the topic of the channel is currently about. Slack markdown format supported."
-                                        },
-                                        "is_private": {
-                                            "type": "integer",
-                                            "description": "Indicates if the channel should be private or public. Use 1 for private or 0 for public."
-                                        }
-                                    },
-                                    "required": ["name", "description", "is_private"]
-                                }
-                            }
-                        },
-                        "required": ["channels"]
-                    }
-                }],
-                "tool_choice": {
-                    "type": "tool",
-                    "name": "create_channels"
-                }
-            })
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + os.environ["DEVXP_API_KEY"]
-            }
-
-            response = requests.request("POST", url, headers=headers, data=payload)
-
-            logger.info(response.json())
-
-            channels_list = response.json()["content"][0]["content"][0]["input"]["channels"]
-            created_channels = []
-
-            for channel_def in channels_list:
-                logger.info(channel_def)
-                try:
-                    channel_created = client.conversations_create(
-                        name=channel_def["name"],
-                        is_private=channel_def["is_private"]==1
-                    )
-                    # Set channel topic and purpose if provided
-                    if "topic" in channel_def:
-                        client.conversations_setTopic(
-                            channel=channel_created["channel"]["id"],
-                            topic=channel_def["topic"]
-                        )
-                    
-                    if "description" in channel_def:
-                        client.conversations_setPurpose(
-                            channel=channel_created["channel"]["id"], 
-                            purpose=channel_def["description"]
-                        )
-                    
-                    # Add user as member and channel owner
-                    client.conversations_invite(
-                        channel=channel_created["channel"]["id"],
-                        users=user_id
-                    )
-
-                    # # Add the bot to the channel
-                    # client.conversations_invite(
-                    #     channel=channel_created["channel"]["id"],
-                    #     users=client.auth_test()["user_id"]
-                    # )
-
-                    # Send DM to user about channel creation
-                    dm_result = client.chat_postMessage(
-                        channel=user_id,
-                        text=f"✨ Created channel <#{channel_created['channel']['id']}>\n" + 
-                            (f"> {channel_def.get('description', 'No description provided')}")
-                    )
-
-                    created_channels.append(channel_created["channel"]["id"])
-                    
-                except SlackApiError as e:
-                    logger.error(f"Error creating channel {channel_def['name']}: {e}")
+            channels_list = factory._fetch_channels(customer_name, use_case)
+            created_channels = logistics._send_channels(client, user_id, channels_list)
                     
             client.chat_postMessage(
                 channel=user_id,
@@ -473,92 +359,16 @@ def handle_generate_canvas(ack, body, client, logger):
             
             logger.debug(f"Selected random members: {random_members}")
 
-            # Format member IDs with <@ > syntax
-            formatted_members = [f"![](@{member_id})" for member_id in random_members]
-            logger.debug(f"Formatted member list: {formatted_members}")
-            # Join the formatted member list with commas
-            member_string = ", ".join(formatted_members)
-            logger.debug(f"Member string: {member_string}")
-
-            url = "https://devxp-ai-api.tinyspeck.com/v1/chat/"
-
-            payload = json.dumps({
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a Slack Connect experience architect."
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Create a canvas for the {channel_name} channel.\n"
-                            f"The channel description is: {channel_purpose}\n"
-                            f"The current topic is: {channel_topic}\n"
-                            f"The following users are members of this channel: {member_string} - use exacly this formate to mention them in the canvas content. "
-                            "and may be used in the canvas content as key contacts. "
-                            "RULE: do not nest bullet points. "
-                            "RULE: use rich markdown format. "
-                            "RULE: make sure the title of the canvas is the first line in the body. "
-                            "RULE: for bullet points use an *"
-                        )
-                    }
-                ],
-                "source": "postman",
-                "max_tokens": 4096,
-                "tools": [{
-                    "name": "create_canvas",
-                    "description": "Creates Slack canvas content and attaches to a Slack channel.",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {
-                            "canvas": {
-                                "type": "object",
-                                "properties": {
-                                    "title": {
-                                        "type": "string",
-                                        "description": "The heading for the canvas. Keep it relatively short."
-                                    },
-                                    "body": {
-                                        "type": "string",
-                                        "description": "Rich content using Slack simple markdown format and emoji."
-                                    }
-                                },
-                                "required": ["title", "body"]
-                            }
-                        },
-                        "description": "A canvas using rich Slack markdown format.",
-                        "required": ["canvas"]
-                    }
-                }],
-                "tool_choice": {
-                    "type": "tool",
-                    "name": "create_canvas"
-                }
-            })
-            
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + os.environ["DEVXP_API_KEY"]
-                }
-
-            response = requests.request("POST", url, headers=headers, data=payload)
-
-            content = response.json()["content"][0]["content"][0]["input"]["canvas"]
+            content = factory._fetch_canvas(
+                channel_name=channel_name,
+                channel_purpose=channel_purpose,
+                channel_topic=channel_topic,
+                member_list=random_members
+            )
 
             logger.info(content)
 
-            if do_canvas_update:
-                canvas_result = client.canvases_edit(
-                    canvas_id=channel_details.get("properties", {}).get("canvas", {}).get("file_id"),
-                    changes=[{"operation": "replace", "document_content": {"type": "markdown", "markdown": content["body"]}}]
-                )
-                canvas_id = channel_details.get("properties", {}).get("canvas", {}).get("file_id")
-            else:
-                canvas_result = client.conversations_canvases_create(
-                    channel_id=selected_channel,
-                    document_content={"type": "markdown", "markdown": content["body"]}
-                )
-                canvas_id = canvas_result["canvas_id"]
+            canvas_id = logistics._send_canvas(client, selected_channel, content, do_canvas_update)
             
             # Get canvas file info
             canvas_info = client.files_info(file=canvas_id)
@@ -574,12 +384,10 @@ def handle_generate_canvas(ack, body, client, logger):
                      f"View it here: <{canvas_permalink}|{content['title']}>"
             )
 
-            logger.info(canvas_result)
-
-            # After successful canvas generation, refresh the channel details modal
-            channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
-            channel = channel_info["channel"]
-            history = client.conversations_history(channel=selected_channel, limit=1)
+            # # After successful canvas generation, refresh the channel details modal
+            # channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
+            # channel = channel_info["channel"]
+            # history = client.conversations_history(channel=selected_channel, limit=1)
             
             # Reopen the channel details modal with updated info
             handle_channel_selection(ack, {
@@ -1247,6 +1055,12 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
             # logger.debug("--------------------------------")
             # logger.debug(f"Generated post: {post}")
             # logger.debug("--------------------------------")
+            # post_result_data = logistics._send_conversation(
+            #     client=client, 
+            #     selected_channel=selected_channel,
+            #     post=post,
+            #     participant_info=participant_info
+            # )
             for post_item in post:
                 generated_posts.append(post_item)
 
@@ -1262,7 +1076,7 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
         post_result_data = logistics._send_conversation(
             client=client, 
             selected_channel=selected_channel,
-            content=generated_posts,
+            post=generated_posts,
             participant_info=participant_info
         )
         post_results = post_result_data["post_results"]
