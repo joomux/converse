@@ -8,6 +8,8 @@ import random
 import json
 import logging
 import time
+import factory
+import logistics
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -1062,6 +1064,27 @@ def handle_generate_conversation(ack, body, client, logger):
                             "type": "plain_text",
                             "text": "Approximate Thread Replies"
                         }
+                    },
+                    {
+                        "type": "input",
+                        "block_id": "save_conversation",
+                        "element": {
+                            "type": "checkboxes",
+                            "action_id": "save_conversation_checkbox",
+                            "options": [
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Save Conversation Definition"
+                                    },
+                                    "value": "save_conversation"
+                                }
+                            ]
+                        },
+                        "label": {
+                            "type": "plain_text",
+                            "text": "Enable re-use manually, or via Workflow?"
+                        }
                     }
                 ]
             }
@@ -1220,7 +1243,7 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
         generated_posts = []
         for i in range(total_posts):
             logger.debug(f"Generating post {i+1} of {total_posts}")
-            post = _fetch_conversation(conversation_params)
+            post = factory._fetch_conversation(conversation_params)
             # logger.debug("--------------------------------")
             # logger.debug(f"Generated post: {post}")
             # logger.debug("--------------------------------")
@@ -1234,110 +1257,18 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
                 view_id=original_view_info["view"]["id"],
                 view=view_body
             )
+
         # Post each generated post and its replies to the channel
-
-        post_results = []
-        reply_results = []
-        for post in generated_posts:
-            try:
-                # Find the participant info for the user who's posting
-                participant = next(
-                    (p for p in participant_info if p['id'] == ''.join(c for c in post["author"] if c.isalnum())),
-                    None
-                )
-
-                if participant:
-                    # Use the actual user ID for posting
-                    post["user"] = participant["id"]
-                else:
-                    logger.warning(f"Could not find participant info for user {post['user']}")
-                    raise Exception(f"Could not find participant info for user {post['user']}")
-                
-                # logger.debug("--------------------------------")
-                # logger.debug(f"Participant: {participant}")
-                # logger.debug("--------------------------------")
-                # Post the main message
-                main_post = client.chat_postMessage(
-                    channel=selected_channel,
-                    text=post["message"],
-                    username=participant["real_name"],
-                    icon_url=participant["avatar"]
-                )
-
-                post_results.append(main_post)
-
-                if "reacjis" in post and post["reacjis"]:
-                    for reaction in post["reacjis"]:
-                        try:
-                            client.reactions_add(
-                                channel=selected_channel,
-                                timestamp=main_post["ts"],
-                                name=reaction.strip(':')
-                            )
-                        except Exception as e:
-                            logger.error(f"Error adding reaction {reaction} to post {main_post['ts']}: {e}")
-                            continue
-
-                # If there are threaded replies, post them in the thread
-                if "replies" in post and post["replies"]:
-                    for reply in post["replies"]:
-                        # Find participant info for the reply user
-                        reply_participant = next(
-                            (p for p in participant_info if p['id'] == ''.join(c for c in reply["author"] if c.isalnum())),
-                            None
-                        )
-
-                        if reply_participant:
-                            reply["user"] = reply_participant["real_name"]
-                        else:
-                            logger.warning(f"Could not find participant info for reply user {reply['user']}")
-                            raise Exception(f"Could not find participant info for reply user {reply['user']}")
-                        
-                        # logger.debug("--------------------------------")
-                        # logger.debug(f"Participant: {reply_participant}")
-                        # logger.debug("--------------------------------")
-
-                        reply_post = client.chat_postMessage(
-                            channel=selected_channel,
-                            thread_ts=main_post["ts"],
-                            text=reply["message"],
-                            username=reply_participant["real_name"],
-                            icon_url=reply_participant["avatar"]
-                        )
-
-                        reply_results.append(reply_post)
-
-                        if "reacjis" in reply and reply["reacjis"]:
-                            for reaction in reply["reacjis"]:
-                                try:
-                                    client.reactions_add(
-                                        channel=selected_channel,
-                                        timestamp=reply_post["ts"],
-                                        name=reaction.strip(':')
-                                    )
-                                except Exception as e:
-                                    logger.error(f"Error adding reaction {reaction} to reply post {reply_post['ts']}: {e}")
-                                    continue
-
-                # Add slight delay between posts to avoid rate limits
-                time.sleep(1)
-
-            except SlackApiError as e:
-                logger.error(f"Error posting message to channel: {e}")
-                continue
+        post_result_data = logistics._send_conversation(
+            client=client, 
+            selected_channel=selected_channel,
+            content=generated_posts,
+            participant_info=participant_info
+        )
+        post_results = post_result_data["post_results"]
+        reply_results = post_result_data["reply_results"]
         
-        logger.info("Starting conversation generation with parameters:", {
-            "company_name": company_name,
-            "industry": industry,
-            "topics": topics,
-            "custom_prompt": custom_prompt,
-            "num_participants": num_participants,
-            "num_posts": num_posts,
-            "post_length": post_length,
-            "tone": tone,
-            "emoji_density": emoji_density,
-            "thread_replies": thread_replies
-        })
+        # TODO: Save conversation definition if selected
 
         # Update modal to show success
         client.views_update(
@@ -1432,128 +1363,6 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
                 }
             )
         raise
-
-def _fetch_conversation(conversation_params):
-    """
-    Fetch a generated conversation from the DevXP API based on provided parameters.
-    
-    Args:
-        conversation_params (dict): Parameters controlling the conversation generation
-            including company_name, industry, topics, etc.
-    
-    Returns:
-        dict: Generated conversation data
-    """
-    url = "https://devxp-ai-api.tinyspeck.com/v1/chat/"
-    
-    # Build the content string based on parameters
-    content = (
-        "I am a Solution Engineer at Slack, creating a demo to showcase Slack's features "
-        "using realistic conversations. Generate a Slack conversations among the following users: "
-        ", ".join([f"<@{user_id}>" for user_id in random.sample(conversation_params["conversation_participants"], len(conversation_params["conversation_participants"]))]) + ".\n\n"
-        f"Context: {conversation_params['industry']} industry\n"
-        f"Structure: It should have between {conversation_params['thread_replies']} threaded replies. \n"
-        f"The current topic is: {conversation_params['topics']} \n"
-        f"The purpose of the channel where this conversation is occurring is: {conversation_params['channel_purpose']} \n"
-        f"The initial post should be {conversation_params['post_length']}, using simple markdown (*bold*, _italic_, `code`).\n"
-        "Voices: Ensure each user has a distinct perspective and voice. Avoid templated messages; aim for authenticity and variety.\n"
-        f"Tone: {conversation_params['tone']}\n"
-        f"Emoji: Standard Slack emoji only. Use {conversation_params['emoji_density']} emojis in message content. "
-        "Limit reactions (0-4 reacjis per message).\n"
-        "User Mentions: Mention only the specified users, with no additional names. "
-        "Do not format topics or keywords with ** marks."
-    )
-
-    payload = {
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are a conversation builder for Slack that can simulate conversations between humans."
-            },
-            {
-                "role": "user",
-                "content": content
-            }
-        ],
-        "source": "converse_demo_app",
-        "max_tokens": 2000,
-        "tools": [{
-            "name": "get_conversation",
-            "description": "Format a Slack conversation as returned from Claude.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "conversations": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "author": {
-                                    "type": "string",
-                                    "description": "The name of the author posting the message"
-                                },
-                                "message": {
-                                    "type": "string",
-                                    "description": "The content of the message posted by the author. "
-                                                 "Bold text is enclosed in single *, Underlined text is inclosed in _, "
-                                                 "Code is inclosed in `, and text to strike through is enclosed in ~. "
-                                                 "There should be approximately 5 sentences."
-                                },
-                                "reacjis": {
-                                    "type": "array",
-                                    "items": {"type": "string"},
-                                    "description": "A list of emojis used in response to this Slack message."
-                                },
-                                "replies": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "author": {
-                                                "type": "string",
-                                                "description": "The name of the author posting the reply message."
-                                            },
-                                            "message": {
-                                                "type": "string",
-                                                "description": "The reply message"
-                                            },
-                                            "reacjis": {
-                                                "type": "array",
-                                                "items": {"type": "string"},
-                                                "description": "An optional list of emojis used in response to this Slack message."
-                                            }
-                                        },
-                                        "required": ["author", "message"]
-                                    },
-                                    "description": "A structured message sent in reply to the previous message. "
-                                                 "There should be approximately 5 replies, though this can vary."
-                                }
-                            },
-                            "required": ["author", "message"]
-                        },
-                        "description": "A structured Slack conversation message."
-                    }
-                },
-                "required": ["conversations"]
-            }
-        }],
-        "tool_choice": {
-            "type": "tool",
-            "name": "get_conversation"
-        }
-    }
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': os.environ.get('DEVXP_API_KEY', '')
-    }
-
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()  # Raise an exception for bad status codes
-
-    # TODO: handle errors better here and make sure the structure has the 'conversations' object
-    
-    return response.json()["content"][0]["content"][0]["input"]["conversations"]
 
 def _get_conversation_progress_view(data, total, current=0):
     progress = round(current/total * 100)
