@@ -107,7 +107,7 @@ def _send_conversation(client, selected_channel: str, post: list|dict, participa
     
     return {
         "post_results": post_results,
-        "reply_results": reply_post
+        "reply_results": reply_results
     }
 
 

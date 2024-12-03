@@ -865,7 +865,7 @@ def handle_generate_conversation(ack, body, client, logger):
                                 {"text": {"type": "plain_text", "text": "0-2 replies"}, "value": "0-2"},
                                 {"text": {"type": "plain_text", "text": "3-5 replies"}, "value": "3-5"},
                                 {"text": {"type": "plain_text", "text": "6-10 replies"}, "value": "6-10"},
-                                {"text": {"type": "plain_text", "text": "11+ replies"}, "value": "11+"}
+                                {"text": {"type": "plain_text", "text": "11-15 replies"}, "value": "11+"}
                             ]
                         },
                         "label": {

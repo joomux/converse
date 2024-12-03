@@ -23,14 +23,27 @@ def _fetch_conversation(conversation_params):
     # Build the content string based on parameters
     content = (
         "I am a Solution Engineer at Slack, creating a demo to showcase Slack's features "
-        "using realistic conversations. Generate a Slack conversations among the following users: "
-        ", ".join([f"<@{user_id}>" for user_id in random.sample(conversation_params["conversation_participants"], len(conversation_params["conversation_participants"]))]) + ".\n\n"
+        f"using realistic conversations. Generate a Slack conversations among the following users: {__build_mention_string(conversation_params['conversation_participants'])}.\n\n"
+    )
+
+    if "company" in conversation_params:
+        content += f"Company: {conversation_params['company_name']}\n"
+    
+    content += (
         f"Context: {conversation_params['industry']} industry\n"
-        f"Structure: It should have between {conversation_params['thread_replies']} threaded replies. \n"
-        f"The current topic is: {conversation_params['topics']} \n"
+        #f"Structure: It should have between {conversation_params['thread_replies']} threaded replies. \n"
+        f"Structure: It should have {random.randrange(__parse_range(start=conversation_params['thread_replies']['min'], stop=conversation_params['thread_replies']['max']))} threaded replies. \n"
+    )
+
+    if "channel_topic" in conversation_params:
+        content += f"The current channel topic is: '{conversation_params['channel_topic']}'\n"
+
+    content += (    
+        # {', '.join(conversation_params['topics'])} \n"
         f"The purpose of the channel where this conversation is occurring is: {conversation_params['channel_purpose']} \n"
-        f"The initial post should be {conversation_params['post_length']}, using simple markdown (*bold*, _italic_, `code`).\n"
+        f"The initial post should be {conversation_params['post_length']}, using simple markdown (*bold*, _italic_, `inline code`, ```code block```).\n"
         "Voices: Ensure each user has a distinct perspective and voice. Avoid templated messages; aim for authenticity and variety.\n"
+        f"Topics: {', '.join(conversation_params['topics'])}\n"
         f"Tone: {conversation_params['tone']}\n"
         f"Emoji: Standard Slack emoji only. Use {conversation_params['emoji_density']} emojis in message content. "
         "Limit reactions (0-4 reacjis per message).\n"
@@ -40,6 +53,9 @@ def _fetch_conversation(conversation_params):
 
     if "custom_prompt" in conversation_params:
         content += f"\n{conversation_params['custom_prompt']}\n"
+
+    logger.debug(f"\n\n{conversation_params}\n\n")
+    logger.debug(f"\n\n{content}\n\n")
 
     payload = {
         "messages": [
@@ -283,3 +299,11 @@ def _fetch_channels(customer_name: str, use_case: str):
     channels_list = response.json()["content"][0]["content"][0]["input"]["channels"]
 
     return channels_list
+
+
+def __build_mention_string(user_list):
+    return ", ".join([f"<@{user_id}>" for user_id in random.sample(user_list, len(user_list))])
+
+def __parse_range(range: str):
+    ints = range.split('-')
+    return {"min": min(ints), "max": max(ints)}
