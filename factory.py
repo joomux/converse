@@ -29,10 +29,11 @@ def _fetch_conversation(conversation_params):
     if "company" in conversation_params:
         content += f"Company: {conversation_params['company_name']}\n"
     
+
     content += (
         f"Context: {conversation_params['industry']} industry\n"
         #f"Structure: It should have between {conversation_params['thread_replies']} threaded replies. \n"
-        f"Structure: It should have {random.randrange(__parse_range(start=conversation_params['thread_replies']['min'], stop=conversation_params['thread_replies']['max']))} threaded replies. \n"
+        f"Structure: It should have {random.randrange(start=__parse_range(conversation_params['thread_replies'])['min'], stop=__parse_range(conversation_params['thread_replies'])['max'])} threaded replies. \n"
     )
 
     if "channel_topic" in conversation_params:
@@ -41,7 +42,7 @@ def _fetch_conversation(conversation_params):
     content += (    
         # {', '.join(conversation_params['topics'])} \n"
         f"The purpose of the channel where this conversation is occurring is: {conversation_params['channel_purpose']} \n"
-        f"The initial post should be {conversation_params['post_length']}, using simple markdown (*bold*, _italic_, `inline code`, ```code block```).\n"
+        f"The length of the initial post should be {conversation_params['post_length']}, using simple markdown (*bold*, _italic_, `inline code`, ```code block```).\n"
         "Voices: Ensure each user has a distinct perspective and voice. Avoid templated messages; aim for authenticity and variety.\n"
         f"Topics: {', '.join(conversation_params['topics'])}\n"
         f"Tone: {conversation_params['tone']}\n"
@@ -54,8 +55,8 @@ def _fetch_conversation(conversation_params):
     if "custom_prompt" in conversation_params:
         content += f"\n{conversation_params['custom_prompt']}\n"
 
-    logger.debug(f"\n\n{conversation_params}\n\n")
-    logger.debug(f"\n\n{content}\n\n")
+    # logger.debug(f"\n\n{conversation_params}\n\n")
+    # logger.debug(f"\n\n{content}\n\n")
 
     payload = {
         "messages": [
@@ -305,5 +306,10 @@ def __build_mention_string(user_list):
     return ", ".join([f"<@{user_id}>" for user_id in random.sample(user_list, len(user_list))])
 
 def __parse_range(range: str):
-    ints = range.split('-')
+    # ints = range.split('-')
+    try:
+        ints = [int(i) for i in range.split('-')]
+    except ValueError as e:
+        logger.error(f"Error converting range to integers: {e}")
+        raise
     return {"min": min(ints), "max": max(ints)}
