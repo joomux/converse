@@ -885,13 +885,17 @@ def handle_generate_conversation(ack, body, client, logger):
                                         "type": "plain_text",
                                         "text": "Save Conversation Definition"
                                     },
-                                    "value": "save_conversation"
+                                    "value": "save_conversation",
+                                    "description": {
+                                        "type": "mrkdwn",
+                                        "text": "Enable re-use manually, or via Workflow? Saves the above values, not the generated conversation, so every run produces something new!"
+                                    }
                                 }
                             ]
                         },
                         "label": {
                             "type": "plain_text",
-                            "text": "Enable re-use manually, or via Workflow?"
+                            "text": "Save Conversation"
                         }
                     }
                 ]
