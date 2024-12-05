@@ -1,4 +1,4 @@
-from slack_bolt import App
+from slack_bolt import App, Ack, Fail, Complete, Say
 from slack.errors import SlackApiError
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import os
@@ -1231,6 +1231,18 @@ def _get_conversation_progress_view(data, total, current=0):
         }
     # logger.debug(f"View: {view}")
     return view
+
+# NOTE: This is a test definition that is a remote workflow step. The step is defined in the App Manager > Workflow Steps, and it's awesome!
+@app.function("hello_world")
+def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
+    ack()
+    user_id = inputs["user_id"]
+    try:
+        output = f"Hello World!"
+        complete({"hello_message": output})
+    except Exception as e:
+        logger.exception(e)
+        fail(f"Failed to complete the step: {e}")
 
 def main():
     try:
