@@ -1244,6 +1244,19 @@ def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Compl
         logger.exception(e)
         fail(f"Failed to complete the step: {e}")
 
+# TODO: build a handler for the message shortcut to add conversation to a thread 
+@app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
+def handle_thread_generate_shortcut(ack, shortcut, client):
+    ack()
+    logger.info(shortcut)
+
+# TODO: build a handler to add content to a channel. First show a modal if the context of the current channel cannot be determined
+# TODO: This could (maybe???) also be run at the thread level and execute the same function as the message action flow... if the thread ts is known
+@app.shortcut({"callback_id": "channel_generate", "type": "shortcut"})
+def handle_channel_generate_shortcut(ack, shortcut, client):
+    ack()
+    logger.info(shortcut)
+
 def main():
     try:
         handler = SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
