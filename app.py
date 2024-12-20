@@ -1,5 +1,5 @@
 from slack_bolt import App, Ack, Fail, Complete, Say
-from slack.errors import SlackApiError
+from slack_sdk.errors import SlackApiError
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import os
 from dotenv import load_dotenv
@@ -10,6 +10,7 @@ import logging
 import time
 import factory
 import logistics
+import worker
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -1249,6 +1250,55 @@ def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Compl
 def handle_thread_generate_shortcut(ack, shortcut, client):
     ack()
     logger.info(shortcut)
+
+    # is this a reply message or a main message - https://api.slack.com/messaging/retrieving#finding_threads 
+    if "thread_ts" in shortcut:
+        # if it's a reply, get the parent message ts
+        main_ts = shortcut["thread_ts"]
+    else:
+        main_ts = shortcut["message_ts"]
+
+    # from the main/parent message, get it and all replies
+    thread = client.conversations_replies(
+        channel=shortcut["channel"]["id"],
+        ts=main_ts
+    )
+
+    logger.info(thread)
+    # iterate on this and build a message from:
+    # - thread["messages"][i]["text"]
+    # - thread["messages"][i]["username"]
+    # @-mentions in additional threaded replies may not work!
+    thread_messages = []
+    for message in thread["messages"]:
+        logger.info(message)
+        if "subtype" in message and message["subtype"] == "bot_message":
+            logger.info(f"Bot message detected: {message['text']}")
+            thread_messages.append({
+                "text": message["text"],
+                "username": message["username"]
+            })
+        else:
+            thread_messages.append({
+                "text": message["text"],
+                "username": message["user_profile"]["display_name"]
+            })
+    # ^^ this is the context for the additional replies!
+    logger.info(thread_messages)
+
+    # get the channel topic, purpose
+    channel = client.conversations_info(
+        channel=shortcut["channel"]["id"]
+    )
+    logger.info(channel)
+    
+    # get channel members that are not bots (getting members and parsing needs to be a separate function)
+    human_members = worker.get_channel_members(client=client, channel=shortcut["channel"]["id"])
+    logger.info(human_members)
+
+    # pass messages to the AI as context and get additional replies
+
+    # iterate and post reply messages
 
 # TODO: build a handler to add content to a channel. First show a modal if the context of the current channel cannot be determined
 # TODO: This could (maybe???) also be run at the thread level and execute the same function as the message action flow... if the thread ts is known
