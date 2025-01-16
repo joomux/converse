@@ -84,7 +84,7 @@ def _fetch_conversation(conversation_params):
                             "properties": {
                                 "author": {
                                     "type": "string",
-                                    "description": "The name of the author posting the message"
+                                    "description": "The name of the author posting the message. This is alphanumeric only."
                                 },
                                 "message": {
                                     "type": "string",
@@ -313,3 +313,95 @@ def __parse_range(range: str):
         logger.error(f"Error converting range to integers: {e}")
         raise
     return {"min": min(ints), "max": max(ints)}
+
+
+def continue_thread(description: str, topic: str, thread: dict, members: list):
+    url = "https://devxp-ai-api.tinyspeck.com/v1/chat/"
+
+    prompt = (
+        "I am a solution engineer at Slack, creating a demo to showcase the value of Slack and using realistic conversations to do so. "
+        "You will read the content of an existing thread along with the channel description and current topic. You will then generate a "
+        "reasonable number of additional replies to extend the conversation."
+        f"\nCHANNEL DESCRIPTION: {description}"
+        f"\nCHANNEL TOPIC: {topic}"
+        "\nEXISTING CONVERSATION:"
+        f"\n{thread}" # TRY TO JUST JSON STRIGIFY THIS AND SEE WHAT HAPPENS!
+        f"\nLIST OF USERS: {__build_mention_string(members)}"
+        "\n\"\"\"\nRULES:"
+        "\nEach message should feel authentic and be unique in structure, format and tone."
+        "\nUse applicable standard Slack emoji."
+        "\nMention only users from the list provided"
+        "\nFormat messages in simplified markdown. For example, *bold*, _italic_, `inline code`, ```code block```"
+        "\nStrucure links in the format <link_address|title of link>"
+        "\"\"\""
+    )
+
+    payload = {
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a conversation builder for Slack that can simulate conversations between humans."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "source": "converse_demo_app",
+        "max_tokens": 2000,
+        "tools": [{
+            "name": "extend_thread",
+            "description": "Extend an existing Slack thread.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "replies": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "author": {
+                                    "type": "string",
+                                    "description": "The name of the authore posting the reply message."
+                                },
+                                 "message": {
+                                    "type": "string",
+                                    "description": "The reply message"
+                                },
+                                "reacjis": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "description": "An optional list of emojis used in response to this Slack message."
+                                }
+                            },
+                            "required": ["author", "message"]
+                        },
+                        "description": "A structured message message send in reply to the previous message. There should be approximately 5 replies, though this should vary."
+                    }
+                },
+                "required": ["replies"]
+            }
+        }],
+        "tool_choice": {
+            "type": "tool",
+            "name": "extend_thread"
+        }
+    }
+
+    logger.info(payload)
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': os.environ.get('DEVXP_API_KEY', '')
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()  # Raise an exception for bad status codes
+
+    # TODO: handle errors better here and make sure the structure has the 'conversations' object
+    
+    replies = response.json()["content"][0]["content"][0]["input"]["replies"]
+
+    logger.info(replies)
+
+    return replies

@@ -16,7 +16,7 @@ def _send_conversation(client, selected_channel: str, post: list|dict, participa
             reply_results.append(temp_result["reply_results"])
         return {
             "post_results": post_results,
-            "reply_results": reply_post
+            "reply_results": reply_results
         }
 
     try:
@@ -41,7 +41,15 @@ def _send_conversation(client, selected_channel: str, post: list|dict, participa
             channel=selected_channel,
             text=post["message"],
             username=participant["real_name"],
-            icon_url=participant["avatar"]
+            icon_url=participant["avatar"],
+            metadata={
+                "event_type": "converse_message_posted",
+                "event_payload": {
+                    "actor_id": participant["id"],
+                    "actor_name": participant["real_name"],
+                    "avatar": participant["avatar"]
+                }
+            }
         )
 
         post_results.append(main_post)
@@ -82,7 +90,16 @@ def _send_conversation(client, selected_channel: str, post: list|dict, participa
                     thread_ts=main_post["ts"],
                     text=reply["message"],
                     username=reply_participant["real_name"],
-                    icon_url=reply_participant["avatar"]
+                    icon_url=reply_participant["avatar"],
+                    metadata={
+                        "event_type": "converse_reply_posted",
+                        "event_payload": {
+                            "actor_id": reply_participant["id"],
+                            "actor_name": reply_participant["real_name"],
+                            "avatar": reply_participant["avatar"]
+                        }
+                    }
+
                 )
 
                 reply_results.append(reply_post)
@@ -175,3 +192,42 @@ def _send_channels(client: dict, user_id: str, channels_list: list):
             logger.error(f"Error creating channel {channel_def['name']}: {e}")
     
     return created_channels
+
+
+def send_message(client, selected_channel: str, post: dict, participant: dict, thread_ts: str):
+    event_type = "converse_reply_posted" if thread_ts else "converse_message_posted"
+    
+    try:
+        return client.chat_postMessage(
+            channel=selected_channel,
+            text=post["message"],
+            username=participant["real_name"],
+            icon_url=participant["avatar"],
+            thread_ts=thread_ts if thread_ts else False,
+            metadata={
+                "event_type": event_type,
+                "event_payload": {
+                    "actor_id": participant["id"],
+                    "actor_name": participant["real_name"],
+                    "avatar": participant["avatar"]
+                }
+            }
+        )
+    except SlackApiError as e:
+        logger.error(f"Error sending message: {e}")
+    
+
+def send_reacjis(client, channel_id, message_ts: str, reacji):
+    if not isinstance(reacji, list):
+        reacji = [reacji]
+    
+    for r in reacji:
+        try:
+            client.reactions_add(
+                channel=channel_id,
+                timestamp=message_ts,
+                name=r.strip(':')
+            )
+        except Exception as e:
+            logger.error(f"Error adding reaction {reacji} to post {message_ts}: {e}")
+            continue

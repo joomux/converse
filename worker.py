@@ -37,3 +37,6 @@ def get_channel_members(client, channel):
     except Exception as e:
         logger.error(f"Error checking channel membership: {e}")
         raise
+
+def _get_user_by_name(name: str):
+    pass
