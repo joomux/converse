@@ -1,4 +1,4 @@
-from slack_bolt import App, Ack, Fail, Complete, Say
+from slack_bolt import App
 from slack_sdk.errors import SlackApiError
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import os
@@ -37,92 +37,17 @@ user_inputs = {}  # Dictionary to store user inputs
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
-        view = {
-            "type": "home",
-            "blocks": [
-                {
-                    "type": "actions",
-                    "block_id": "home_buttons",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Create Channels",
-                                "emoji": True
-                            },
-                            "action_id": "open_channel_creator"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Saved Conversations",
-                                "emoji": True
-                            },
-                            "action_id": "view_saved_conversations"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Conversation History",
-                                "emoji": True
-                            },
-                            "action_id": "view_conversation_history"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Conversation Analytics",
-                                "emoji": True
-                            },
-                            "action_id": "view_conversation_analytics"
-                        }
-                    ]
-                },
-                {
-                    "type": "divider"
-                },
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Let's build a demo!",
-                        "emoji": True
-                    }
-                },
-                {
-                    "type": "section",
-                    "block_id": "channel_select",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Choose a channel to work with:"
-                    },
-                    "accessory": {
-                        "type": "conversations_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select a channel",
-                            "emoji": True
-                        },
-                        "action_id": "selected_channel",
-                        "filter": {
-                            "include": ["public", "private"],
-                            "exclude_bot_users": True
-                        }
-                    }
-                }
-            ]
-        }
+        # Path to home_tab.json block kit
+        file_path = os.path.join("block_kit", "home_tab.json")
 
-        # Publish the view
+        with open(file_path, "r") as file:
+            view = json.load(file)
+
+        # Publish the view to the Slack app home
         client.views_publish(
-            user_id=event["user"],
-            view=view
+                user_id=event["user"],
+                view=view
         )
-
     except Exception as e:
         logger.error(f"Error updating home tab: {e}")
 
@@ -1233,17 +1158,17 @@ def _get_conversation_progress_view(data, total, current=0):
     # logger.debug(f"View: {view}")
     return view
 
-# NOTE: This is a test definition that is a remote workflow step. The step is defined in the App Manager > Workflow Steps, and it's awesome!
-@app.function("hello_world")
-def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
-    ack()
-    user_id = inputs["user_id"]
-    try:
-        output = f"Hello World!"
-        complete({"hello_message": output})
-    except Exception as e:
-        logger.exception(e)
-        fail(f"Failed to complete the step: {e}")
+# # NOTE: This is a test definition that is a remote workflow step. The step is defined in the App Manager > Workflow Steps, and it's awesome!
+# @app.function("hello_world")
+# def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
+#     ack()
+#     user_id = inputs["user_id"]
+#     try:
+#         output = f"Hello World!"
+#         complete({"hello_message": output})
+#     except Exception as e:
+#         logger.exception(e)
+#         fail(f"Failed to complete the step: {e}")
 
 # TODO: build a handler for the message shortcut to add conversation to a thread 
 @app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
