@@ -51,6 +51,56 @@ def update_home_tab(client, event, logger):
     except Exception as e:
         logger.error(f"Error updating home tab: {e}")
 
+@app.action("enter_builder_mode_button")
+def handle_enter_builder_mode(ack, body, client):
+    ack()
+    try:
+        # Update the App Home
+        update_app_home_to_builder_mode(client, body["user"]["id"])
+    except Exception as e:
+        logger.error(f"Error updating App Home to builder mode: {e}")
+
+def update_app_home_to_builder_mode(client, user_id):
+    # Load the builder mode view JSON
+    view_path = os.path.join("block_kit", "builder_mode.json")
+    with open(view_path, "r") as file:
+        builder_view = json.load(file)
+
+    # Update the App Home
+    try:
+        client.views_publish(
+            user_id=user_id,
+            view=builder_view
+        )
+    except SlackApiError as e:
+        logger.error(f"Error updating App Home: {e}")
+
+@app.action("save_exit_builder_mode")
+def handle_enter_builder_mode(ack, body, client):
+    ack()
+    try:
+        # Update the App Home
+        save_exit_builder_mode(client, body["user"]["id"])
+    except Exception as e:
+        logger.error(f"Error exiting builder mode: {e}")
+
+def save_exit_builder_mode(client, user_id):
+    # Load the home tab view JSON
+    view_path = os.path.join("block_kit", "home_tab.json")
+    with open(view_path, "r") as file:
+        builder_view = json.load(file)
+
+    # Update the App Home
+    try:
+        client.views_publish(
+            user_id=user_id,
+            view=builder_view
+        )
+    except SlackApiError as e:
+        logger.error(f"Error updating App Home: {e}")
+
+#### JEREMY'S CODE ####
+
 @app.action("open_channel_creator")
 def handle_open_channel_creator(ack, body, client):
     ack()

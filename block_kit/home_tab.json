@@ -1,231 +1,201 @@
 {
-	"type": "home",
-	"blocks": [
-		{
-			"type": "header",
-			"text": {
-				"type": "plain_text",
-				"text": "Build a Custom Demo",
-				"emoji": true
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "Define a custom demo with tailored messages, channels, canvases and more."
-			}
-		},
-		{
-			"type": "actions",
-			"elements": [
-				{
-					"text": {
-						"text": "⇥ Enter Builder Mode",
-						"type": "plain_text",
-						"emoji": true
-					},
-					"type": "button",
-					"value": "option_1"
-				}
-			]
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "​ "
-			}
-		},
-		{
-			"type": "divider"
-		},
-		{
-			"type": "header",
-			"text": {
-				"type": "plain_text",
-				"text": "Demo Templates",
-				"emoji": true
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "plain_text",
-				"text": "Browse and use pre-built templates for common demo use cases.",
-				"emoji": true
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "​"
-			}
-		},
-		{
-			"type": "actions",
-			"elements": [
-				{
-					"text": {
-						"text": "⇥ Browse Gallery",
-						"type": "plain_text",
-						"emoji": true
-					},
-					"type": "button",
-					"value": "option_4"
-				}
-			]
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "​ "
-			}
-		},
-		{
-			"type": "divider"
-		},
-		{
-			"type": "header",
-			"text": {
-				"type": "plain_text",
-				"text": "Saved Demos",
-				"emoji": true
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "​ "
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "Customer Hooli project"
-			},
-			"accessory": {
-				"type": "overflow",
-				"options": [
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 0*",
-							"emoji": true
-						},
-						"value": "value-0"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 1*",
-							"emoji": true
-						},
-						"value": "value-1"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 2*",
-							"emoji": true
-						},
-						"value": "value-2"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 3*",
-							"emoji": true
-						},
-						"value": "value-3"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 4*",
-							"emoji": true
-						},
-						"value": "value-4"
-					}
-				],
-				"action_id": "overflow-action"
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "New hire onboarding"
-			},
-			"accessory": {
-				"type": "overflow",
-				"options": [
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 0*",
-							"emoji": true
-						},
-						"value": "value-0"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 1*",
-							"emoji": true
-						},
-						"value": "value-1"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 2*",
-							"emoji": true
-						},
-						"value": "value-2"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 3*",
-							"emoji": true
-						},
-						"value": "value-3"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "*plain_text option 4*",
-							"emoji": true
-						},
-						"value": "value-4"
-					}
-				],
-				"action_id": "overflow-action"
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "​"
-			}
-		},
-		{
-			"type": "divider"
-		},
-		{
-			"type": "context",
-			"elements": [
-				{
-					"type": "mrkdwn",
-					"text": "_Developed by Jeremy Roberts and Andrew Nikolic • for questions and feedback visit #proj-slack-demo-generator_"
-				}
-			]
-		}
-	]
+    "type": "home",
+    "blocks": [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Build a Custom Demo",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Define a custom demo with tailored messages, channels, canvases and more."
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "text": {
+                        "text": "⇥ Enter Builder Mode",
+                        "type": "plain_text",
+                        "emoji": true
+                    },
+                    "type": "button",
+                    "value": "enter_builder_mode",
+                    "action_id": "enter_builder_mode_button"
+                }
+            ]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​ "
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Demo Templates",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": "Browse and use pre-built templates for common demo use cases.",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​"
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "text": {
+                        "text": "⇥ Browse Gallery",
+                        "type": "plain_text",
+                        "emoji": true
+                    },
+                    "type": "button",
+                    "value": "browse_gallery",
+                    "action_id": "browse_gallery_button"
+                }
+            ]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​ "
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Saved Demos",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​ "
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Customer Hooli project"
+            },
+            "accessory": {
+                "type": "overflow",
+                "options": [
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Edit",
+                            "emoji": true
+                        },
+                        "value": "edit_hooli_demo"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Duplicate",
+                            "emoji": true
+                        },
+                        "value": "duplicate_hooli_demo"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Delete",
+                            "emoji": true
+                        },
+                        "value": "delete_hooli_demo"
+                    }
+                ],
+                "action_id": "hooli_demo_overflow"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "New hire onboarding"
+            },
+            "accessory": {
+                "type": "overflow",
+                "options": [
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Edit",
+                            "emoji": true
+                        },
+                        "value": "edit_onboarding_demo"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Duplicate",
+                            "emoji": true
+                        },
+                        "value": "duplicate_onboarding_demo"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Delete",
+                            "emoji": true
+                        },
+                        "value": "delete_onboarding_demo"
+                    }
+                ],
+                "action_id": "onboarding_demo_overflow"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​"
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "_Developed by Jeremy Roberts and Andrew Nikolic • for questions and feedback visit #proj-slack-demo-generator_"
+                }
+            ]
+        }
+    ]
 }
