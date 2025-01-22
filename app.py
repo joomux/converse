@@ -11,6 +11,9 @@ import time
 import factory
 import logistics
 import worker
+from sqlalchemy import create_engine
+from sqlalchemy.sql import text
+from datetime import datetime, timezone
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -98,6 +101,46 @@ def save_exit_builder_mode(client, user_id):
         )
     except SlackApiError as e:
         logger.error(f"Error updating App Home: {e}")
+
+@app.action("select_demo_components")
+def handle_save_builder_mode_selections(ack, body, client):
+    ack()
+    try:
+        # Get user ID and selections
+        user_id = body["user"]["id"]
+        selections = body["view"]["state"]["values"]
+        save_user_selections(user_id, selections)
+    except Exception as e:
+        logger.error(f"Error saving builder mode selections: {e}")
+
+# Database connection and save "builder mode" selections
+
+DATABASE_URL = "postgresql://postgres:postgres@localhost/converse2"
+engine = create_engine(DATABASE_URL)
+
+def save_user_selections(user_id, selections):
+    query = text("""
+        INSERT INTO user_builder_selections (user_id, builder_options, last_updated)
+        VALUES (:user_id, :builder_options, :last_updated)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET 
+            builder_options = :builder_options,
+            last_updated = :last_updated
+    """)
+    with engine.connect() as conn:
+        conn.execute(query, {
+            "user_id": user_id,
+            "builder_options": json.dumps(selections),  # Convert selections to JSON string
+            "last_updated": datetime.now(timezone.utc)  # Use timezone-aware datetime
+        })
+
+# Retrieve "builder mode" users selections
+
+# def get_user_selections(user_id):
+#     query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id")
+#     with engine.connect() as conn:
+#         result = conn.execute(query, {"user_id": user_id}).fetchone()
+#         return result["builder_options"] if result else None
 
 #### JEREMY'S CODE ####
 
