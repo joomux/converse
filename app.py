@@ -40,17 +40,43 @@ user_inputs = {}  # Dictionary to store user inputs
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
+        # Fetch builder options from the database for this user
+        user_id = event["user"]
+        builder_options = get_user_selections(user_id)
+
         # Path to home_tab.json block kit
         file_path = os.path.join("block_kit", "home_tab.json")
-
         with open(file_path, "r") as file:
             view = json.load(file)
+
+        # Modify the Block Kit JSON to include builder options (fourth block and 3rd index of json)
+        if builder_options:
+             # Extract relevant information from builder_options
+            selected_options = builder_options.get('+LWF5', {}).get('select_demo_components', {}).get('selected_options', [])
+
+            if selected_options:
+                options_str = ", ".join([opt['text']['text'] for opt in selected_options])
+                view["blocks"][3]["elements"] = [
+                    {
+                        "type": "mrkdwn",
+                        "text": f":eight_spoked_asterisk: Your current options: {options_str}"
+                    }
+                ]
+            else:
+                view["blocks"][3]["elements"] = [
+                    {
+                        "type": "mrkdwn",
+                        "text": ":no_entry_sign: Current Configuration: *No options selected.*"
+                    }
+                ]
 
         # Publish the view to the Slack app home
         client.views_publish(
                 user_id=event["user"],
                 view=view
         )
+        logger.info(f"Home tab updated for user {user_id}")
+
     except Exception as e:
         logger.error(f"Error updating home tab: {e}")
 
@@ -83,7 +109,9 @@ def handle_enter_builder_mode(ack, body, client):
     ack()
     try:
         # Update the App Home
-        save_exit_builder_mode(client, body["user"]["id"])
+        user_id = body["user"]["id"]
+        # Reuse the update_home_tab function to ensure consistency
+        update_home_tab(client, {"user": user_id}, logger)
     except Exception as e:
         logger.error(f"Error exiting builder mode: {e}")
 
@@ -102,6 +130,7 @@ def save_exit_builder_mode(client, user_id):
     except SlackApiError as e:
         logger.error(f"Error updating App Home: {e}")
 
+
 @app.action("select_demo_components")
 def handle_save_builder_mode_selections(ack, body, client):
     ack()
@@ -110,11 +139,16 @@ def handle_save_builder_mode_selections(ack, body, client):
         user_id = body["user"]["id"]
         selections = body["view"]["state"]["values"]
         save_user_selections(user_id, selections)
+        
+        # Log the successful save
+        logger.info(f"Successfully saved selections for user {user_id}")
+        
     except Exception as e:
         logger.error(f"Error saving builder mode selections: {e}")
 
-# Database connection and save "builder mode" selections
 
+
+# Database connection and save "builder mode" selections
 DATABASE_URL = "postgresql://postgres:postgres@localhost/converse2"
 engine = create_engine(DATABASE_URL)
 
@@ -156,12 +190,19 @@ def save_user_selections(user_id, selections):
         logger.error(f"Error saving builder mode selections: {e}")
 
 # Retrieve "builder mode" users selections
+def get_user_selections(user_id):
+    try:
+        query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id")
+        with engine.connect() as conn:
+            result = conn.execute(query, {"user_id": user_id}).fetchone()
+            #logger.info(f"Query result for user {user_id}: {result}")
+            if result and result[0]:
+                return result[0]
+            return None
+    except Exception as e:
+        logger.error(f"Error getting user selections: {e}")
+        return None
 
-# def get_user_selections(user_id):
-#     query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id")
-#     with engine.connect() as conn:
-#         result = conn.execute(query, {"user_id": user_id}).fetchone()
-#         return result["builder_options"] if result else None
 
 #### JEREMY'S CODE ####
 

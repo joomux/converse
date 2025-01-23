@@ -32,6 +32,16 @@
             ]
         },
         {
+			"type": "context",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "Placeholder",
+					"emoji": true
+				}
+			]
+		},
+        {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
