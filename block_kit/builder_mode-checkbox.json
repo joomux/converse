@@ -1,0 +1,188 @@
+{
+    "type": "home",
+    "blocks": [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Builder Mode",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Define a custom demo with tailored messages, channels, canvases and more."
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "text": {
+                        "text": "⇤ Save & Exit Builder Mode",
+                        "type": "plain_text",
+                        "emoji": true
+                    },
+                    "type": "button",
+                    "style": "primary",
+                    "value": "save_and_exit",
+                    "action_id": "save_exit_builder_mode"
+                }
+            ]
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Components",
+                "emoji": true
+            }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "plain_text",
+                    "text": "Select the components you want included in your demo.",
+                    "emoji": true
+                }
+            ]
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "checkboxes",
+                    "options": [
+                        {
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "*Conversations*"
+                            },
+                            "description": {
+                                "type": "mrkdwn",
+                                "text": "Generate messages and post as users into a channel"
+                            },
+                            "value": "conversations"
+                        },
+                        {
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "*Channels*"
+                            },
+                            "description": {
+                                "type": "mrkdwn",
+                                "text": "Create brand new channels"
+                            },
+                            "value": "channels"
+                        },
+                        {
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "*Canvas*"
+                            },
+                            "description": {
+                                "type": "mrkdwn",
+                                "text": "Attach Canvases with populated content"
+                            },
+                            "value": "canvas"
+                        },
+                        {
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "*Apps*"
+                            },
+                            "description": {
+                                "type": "mrkdwn",
+                                "text": "Generate apps and post them into channels"
+                            },
+                            "value": "apps"
+                        }
+                    ],
+                    "action_id": "select_demo_components"
+                }
+            ]
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Conversations",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​ "
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​"
+            }
+        },
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Channels",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​ "
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​ "
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​"
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "_Developed by Jeremy Roberts and Andrew Nikolic • for questions and feedback visit #proj-slack-demo-generator_"
+                }
+            ]
+        }
+    ]
+}

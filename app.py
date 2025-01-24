@@ -42,20 +42,37 @@ def update_home_tab(client, event, logger):
     try:
         # Fetch builder options from the database for this user
         user_id = event["user"]
-        builder_options = get_user_selections(user_id)
+        
+        # Retrieve the builder options from the database
+        builder_options = get_user_selections(user_id)  # Ensure this function is properly implemented to fetch user data
 
-        # Path to home_tab.json block kit
+        # Path to home_tab.json Block Kit template
         file_path = os.path.join("block_kit", "home_tab.json")
+        
+        # Read the home tab view JSON from the file
         with open(file_path, "r") as file:
             view = json.load(file)
 
-        # Modify the Block Kit JSON to include builder options (fourth block and 3rd index of json)
-        if builder_options:
-             # Extract relevant information from builder_options
-            selected_options = builder_options.get('+LWF5', {}).get('select_demo_components', {}).get('selected_options', [])
+        # Mapping dictionary
+        option_mapping = {
+            "option-channels": "Channels",
+            "option-users": "Users",
+            "option-canvas": "Canvas",
+            "option-apps": "Apps"
+        }
 
-            if selected_options:
-                options_str = ", ".join([opt['text']['text'] for opt in selected_options])
+        # Modify the Block Kit JSON to display builder options
+        if builder_options:
+            # Assuming builder_options is a dictionary with selections stored as keys
+            selected_options = builder_options.get('multi_static_select-action', [])
+
+            # Map the selected values to their display names
+            display_values = [option_mapping.get(value, value) for value in selected_options]
+                
+            if display_values:
+                # Format the selected options into a string
+                options_str = ", ".join(display_values)
+                # Update the Block Kit view with the selected options
                 view["blocks"][3]["elements"] = [
                     {
                         "type": "mrkdwn",
@@ -63,22 +80,35 @@ def update_home_tab(client, event, logger):
                     }
                 ]
             else:
+                # Display a message when no options are selected
                 view["blocks"][3]["elements"] = [
                     {
                         "type": "mrkdwn",
                         "text": ":no_entry_sign: Current Configuration: *No options selected.*"
                     }
                 ]
+        else:
+            # Handle case where there are no builder options in the database
+            view["blocks"][3]["elements"] = [
+                {
+                    "type": "mrkdwn",
+                    "text": ":no_entry_sign: Current Configuration: *No options selected.*"
+                }
+            ]
 
-        # Publish the view to the Slack app home
+        # Publish the updated view to the Slack app home
         client.views_publish(
-                user_id=event["user"],
-                view=view
+            user_id=event["user"],  # User ID from the event
+            view=view
         )
+        
+        # Log the successful update
         logger.info(f"Home tab updated for user {user_id}")
 
     except Exception as e:
         logger.error(f"Error updating home tab: {e}")
+
+
 
 @app.action("enter_builder_mode_button")
 def handle_enter_builder_mode(ack, body, client):
@@ -95,7 +125,28 @@ def update_app_home_to_builder_mode(client, user_id):
     with open(view_path, "r") as file:
         builder_view = json.load(file)
 
-    # Update the App Home
+    # Retrieve user selections from the database
+    builder_options = get_user_selections(user_id)
+
+    # If selections are available, update the builder view with the selected options
+    if builder_options:
+        selected_values = [
+            option['value'] for option in builder_options.get('+LWF5', {}).get('select_demo_components', {}).get('selected_options', [])
+        ]
+
+        # Update checkboxes in the builder view with the selected options
+        for block in builder_view["blocks"]:
+            if "accessory" in block and block["accessory"].get("type") == "checkboxes":
+                accessory = block["accessory"]
+                # Set initial_options only with options that match the selected values
+                accessory["initial_options"] = [
+                    option for option in accessory["options"] if option["value"] in selected_values
+                ]
+
+    # Log the modified builder view JSON
+    logger.debug(f"Modified builder view JSON: {json.dumps(builder_view, indent=2)}")
+    
+    # Update the App Home with the modified builder view
     try:
         client.views_publish(
             user_id=user_id,
@@ -103,6 +154,7 @@ def update_app_home_to_builder_mode(client, user_id):
         )
     except SlackApiError as e:
         logger.error(f"Error updating App Home: {e}")
+
 
 @app.action("save_exit_builder_mode")
 def handle_enter_builder_mode(ack, body, client):
@@ -130,23 +182,29 @@ def save_exit_builder_mode(client, user_id):
     except SlackApiError as e:
         logger.error(f"Error updating App Home: {e}")
 
-
-@app.action("select_demo_components")
-def handle_save_builder_mode_selections(ack, body, client):
+@app.action("multi_static_select-action")
+def handle_some_action(ack, body, logger):
     ack()
     try:
         # Get user ID and selections
         user_id = body["user"]["id"]
         selections = body["view"]["state"]["values"]
-        save_user_selections(user_id, selections)
+
+        # Extract specific IDs or values from the selections
+        selected_values = {}
+        for block_id, block in selections.items():
+            for action_id, action in block.items():
+                if action["type"] == "multi_static_select":
+                    selected_values[action_id] = [option["value"] for option in action["selected_options"]]
+
+        # Save the selections to the database
+        save_user_selections(user_id, selected_values)
         
         # Log the successful save
         logger.info(f"Successfully saved selections for user {user_id}")
         
     except Exception as e:
         logger.error(f"Error saving builder mode selections: {e}")
-
-
 
 # Database connection and save "builder mode" selections
 DATABASE_URL = "postgresql://postgres:postgres@localhost/converse2"
@@ -195,7 +253,7 @@ def get_user_selections(user_id):
         query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id")
         with engine.connect() as conn:
             result = conn.execute(query, {"user_id": user_id}).fetchone()
-            #logger.info(f"Query result for user {user_id}: {result}")
+            logger.info(f"Query result for user {user_id}: {result}")
             if result and result[0]:
                 return result[0]
             return None
