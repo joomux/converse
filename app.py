@@ -44,7 +44,7 @@ def update_home_tab(client, event, logger):
         user_id = event["user"]
         
         # Retrieve the builder options from the database
-        builder_options = get_user_selections(user_id)  # Ensure this function is properly implemented to fetch user data
+        builder_options = get_user_selections(user_id)  
 
         # Path to home_tab.json Block Kit template
         file_path = os.path.join("block_kit", "home_tab.json")
@@ -55,15 +55,14 @@ def update_home_tab(client, event, logger):
 
         # Mapping dictionary
         option_mapping = {
-            "option-channels": "Channels",
-            "option-users": "Users",
-            "option-canvas": "Canvas",
-            "option-apps": "Apps"
+            "option-channels": "*Channels*",
+            "option-users": "*Users*",
+            "option-canvas": "*Canvas*",
+            "option-apps": "*Apps*"
         }
 
         # Modify the Block Kit JSON to display builder options
         if builder_options:
-            # Assuming builder_options is a dictionary with selections stored as keys
             selected_options = builder_options.get('multi_static_select-action', [])
 
             # Map the selected values to their display names
@@ -76,7 +75,7 @@ def update_home_tab(client, event, logger):
                 view["blocks"][3]["elements"] = [
                     {
                         "type": "mrkdwn",
-                        "text": f":eight_spoked_asterisk: Your current options: {options_str}"
+                        "text": f":eight_spoked_asterisk: Current custom demo config: {options_str}"
                     }
                 ]
             else:
@@ -84,7 +83,7 @@ def update_home_tab(client, event, logger):
                 view["blocks"][3]["elements"] = [
                     {
                         "type": "mrkdwn",
-                        "text": ":no_entry_sign: Current Configuration: *No options selected.*"
+                        "text": ":no_entry_sign: Current custom demo config: *No selections.*"
                     }
                 ]
         else:
@@ -92,7 +91,7 @@ def update_home_tab(client, event, logger):
             view["blocks"][3]["elements"] = [
                 {
                     "type": "mrkdwn",
-                    "text": ":no_entry_sign: Current Configuration: *No options selected.*"
+                    "text": ":no_entry_sign: Current custom demo config: *No selections.*"
                 }
             ]
 
@@ -107,7 +106,6 @@ def update_home_tab(client, event, logger):
 
     except Exception as e:
         logger.error(f"Error updating home tab: {e}")
-
 
 
 @app.action("enter_builder_mode_button")
@@ -126,26 +124,21 @@ def update_app_home_to_builder_mode(client, user_id):
         builder_view = json.load(file)
 
     # Retrieve user selections from the database
-    builder_options = get_user_selections(user_id)
+    builder_options = get_user_selections(user_id)  # Returns JSON like {"multi_static_select-action": ["option-channels", "option-users"]}
 
     # If selections are available, update the builder view with the selected options
     if builder_options:
-        selected_values = [
-            option['value'] for option in builder_options.get('+LWF5', {}).get('select_demo_components', {}).get('selected_options', [])
-        ]
-
-        # Update checkboxes in the builder view with the selected options
+        selected_values = builder_options.get("multi_static_select-action", [])
+  
+        # Loop through blocks and update multi_static_select
         for block in builder_view["blocks"]:
-            if "accessory" in block and block["accessory"].get("type") == "checkboxes":
+            if "accessory" in block and block["accessory"].get("type") == "multi_static_select":
                 accessory = block["accessory"]
-                # Set initial_options only with options that match the selected values
+                # Filter the options based on selected values, add them to initial_options
                 accessory["initial_options"] = [
                     option for option in accessory["options"] if option["value"] in selected_values
-                ]
+            ]
 
-    # Log the modified builder view JSON
-    logger.debug(f"Modified builder view JSON: {json.dumps(builder_view, indent=2)}")
-    
     # Update the App Home with the modified builder view
     try:
         client.views_publish(
