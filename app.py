@@ -11,10 +11,14 @@ import time
 import factory
 import logistics
 import worker
+from objects import Database, DatabaseConfig
+from typing import Dict, Any
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+db = Database(DatabaseConfig())
 
 # Load environment variables
 load_dotenv()
@@ -37,6 +41,9 @@ user_inputs = {}  # Dictionary to store user inputs
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
+        logger.debug("CLIENT START")
+        logger.debug(client)
+        logger.debug("CLIENT END")
         view = {
             "type": "home",
             "blocks": [
@@ -242,9 +249,14 @@ def handle_channel_creator_submission(ack, body, client, view, logger):
             channels_list = factory._fetch_channels(customer_name, use_case)
             created_channels = logistics._send_channels(client, user_id, channels_list)
                     
-            client.chat_postMessage(
-                channel=user_id,
-                text=f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
+            # client.chat_postMessage(
+            #     channel=user_id,
+            #     text=f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
+            # )
+            logistics.send_message(
+                client=client,
+                selected_channel=user_id,
+                post={"message":f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])}
             )
             # Close loading modal
             client.views_update(
@@ -264,9 +276,14 @@ def handle_channel_creator_submission(ack, body, client, view, logger):
 
     except Exception as e:
         logger.error(f"Error in channel creator submission: {e}")
-        client.chat_postMessage(
-            channel=user_id,
-            text=f"❌ Error creating channels: {str(e)}"
+        # client.chat_postMessage(
+        #     channel=user_id,
+        #     text=f"❌ Error creating channels: {str(e)}"
+        # )
+        logistics.send_message(
+            client=client,
+            selected_channel=user_id,
+            post={"message": f"❌ Error creating channels: {str(e)}"}
         )
         client.views_update(
             view_id=view_modal["view"]["id"],
@@ -379,10 +396,16 @@ def handle_generate_canvas(ack, body, client, logger):
             canvas_permalink = canvas_info["file"]["permalink"]
             logger.info(f"Canvas permalink: {canvas_permalink}")
             # Send DM to user about canvas creation/update
-            client.chat_postMessage(
-                channel=body["user"]["id"],
-                text=f"{'Updated' if do_canvas_update else 'Created'} canvas for <#{selected_channel}>\n" +
-                     f"View it here: <{canvas_permalink}|{content['title']}>"
+            # client.chat_postMessage(
+            #     channel=body["user"]["id"],
+            #     text=f"{'Updated' if do_canvas_update else 'Created'} canvas for <#{selected_channel}>\n" +
+            #          f"View it here: <{canvas_permalink}|{content['title']}>"
+            # )
+            logistics.send_message(
+                client=client,
+                selected_channel=body["user"]["id"],
+                post={"message":f"{'Updated' if do_canvas_update else 'Created'} canvas for <#{selected_channel}>\n" +
+                     f"View it here: <{canvas_permalink}|{content['title']}>"}
             )
 
             # # After successful canvas generation, refresh the channel details modal
@@ -914,6 +937,11 @@ def handle_generate_conversation(ack, body, client, logger):
 @app.view("conversation_generator_modal")
 def handle_conversation_generator_submission(ack, body, client, view, logger):
     ack()
+    
+    current_user = worker.get_user(client, body["user"]["id"])
+    # begin history logging!
+
+
     # Initialize original_view_info outside try block
     original_view_info = None
     try:
@@ -934,6 +962,15 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
         # Get selected channel from private metadata
         selected_channel = view["private_metadata"]
         logger.debug(f"Selected channel for conversation generation: {selected_channel}")
+
+        # Prep the message history log
+        history_entry = {
+            "conversation_id": None,
+            "channel_id": selected_channel,
+            "user_id": current_user["id"]
+        }
+        history_row = db.insert("history", history_entry)
+        start_time = worker.get_time()
 
         # Build data dictionary from form values
         data = {
@@ -1054,6 +1091,12 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
         total_posts = random.randint(min_posts, max_posts)
         
         generated_posts = []
+
+        history = {
+            "user_id": current_user["id"],
+            "channel_id": selected_channel,
+            "id": history_row["id"]
+        }
         for i in range(total_posts):
             logger.debug(f"Generating post {i+1} of {total_posts}")
             post = factory._fetch_conversation(conversation_params)
@@ -1066,7 +1109,9 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
             #     post=post,
             #     participant_info=participant_info
             # )
+            
             for post_item in post:
+                post_item["history"] = history.copy() # TODO: this is throwing a problem. Fix it!
                 generated_posts.append(post_item)
 
             view_body = _get_conversation_progress_view(data=conversation_params, total=total_posts, current=i+1)
@@ -1086,6 +1131,11 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
         )
         post_results = post_result_data["post_results"]
         reply_results = post_result_data["reply_results"]
+
+        # update the history for query time
+        query_time = worker.get_time() - start_time
+        logger.info(f"Start time = {start_time}; query time: {query_time}")
+        db.update("history", {"query_time": query_time}, {"id": history_row["id"]})
         
         # TODO: Save conversation definition if selected
 
@@ -1137,6 +1187,9 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
     except Exception as e:
         logger.error(f"Error in conversation generator submission: {e}")
         logger.error(f"View: {view}")
+
+        # delete the history item
+        db.delete("history", {"id": history_row["id"]})
         
         # Check if original_view_info exists before trying to update
         if original_view_info:
@@ -1249,7 +1302,17 @@ def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Compl
 @app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
 def handle_thread_generate_shortcut(ack, shortcut, client):
     ack()
+    
     logger.info(shortcut)
+
+    # Prep the message history log
+    history_entry = {
+        "conversation_id": None,
+        "channel_id": shortcut["channel"]["id"],
+        "user_id": shortcut["user"]["id"]
+    }
+    history_row = db.insert("history", history_entry)
+    start_time = worker.get_time()
 
     # is this a reply message or a main message - https://api.slack.com/messaging/retrieving#finding_threads 
     if "thread_ts" in shortcut:
@@ -1257,6 +1320,13 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
         main_ts = shortcut["thread_ts"]
     else:
         main_ts = shortcut["message_ts"]
+
+    temp_message = logistics.send_message(
+        client=client,
+        selected_channel=shortcut["channel"]["id"],
+        post={"message":"Generating conversations..."},
+        thread_ts=main_ts
+    )
 
     # from the main/parent message, get it and all replies
     thread = client.conversations_replies(
@@ -1354,7 +1424,8 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
                 selected_channel=shortcut["channel"]["id"],
                 post=reply_post,
                 participant=author,
-                thread_ts=main_ts
+                thread_ts=main_ts,
+                history_id=history_row["id"]
             )
 
             if "reacjis" in reply:
@@ -1366,9 +1437,19 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
                 )
         except Exception as e:
             logger.error(f"Error sending reply: {e}")
+    
+    # logger.debug(temp_message)
+    # Delete the temp message
+    client.chat_delete(
+        channel=temp_message["channel"],
+        ts=temp_message["ts"]
+    )
 
+    # update the history for query time
+    query_time = worker.get_time() - start_time
+    logger.info(f"Start time = {start_time}; query time: {query_time}")
+    db.update("history", {"query_time": query_time}, {"id": history_row["id"]})
 
-    # iterate and post reply messages
 
 # TODO: build a handler to add content to a channel. First show a modal if the context of the current channel cannot be determined
 # TODO: This could (maybe???) also be run at the thread level and execute the same function as the message action flow... if the thread ts is known
