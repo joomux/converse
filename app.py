@@ -1288,58 +1288,50 @@ def _get_conversation_progress_view(data, total, current=0):
     # logger.debug(f"View: {view}")
     return view
 
-# NOTE: This is a test definition that is a remote workflow step. The step is defined in the App Manager > Workflow Steps, and it's awesome!
-@app.function("hello_world")
-def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
+@app.function("converse_thread_extend")
+def handle_step_extend_thread(ack: Ack, client, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
     ack()
-    user_id = inputs["user_id"]
-    try:
-        output = f"Hello World!"
-        complete({"hello_message": output})
-    except Exception as e:
-        logger.exception(e)
-        fail(f"Failed to complete the step: {e}")
-
-# TODO: build a handler for the message shortcut to add conversation to a thread 
-@app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
-def handle_thread_generate_shortcut(ack, shortcut, client):
-    ack()
-
-    current_user = worker.get_user(client, shortcut["user"]["id"])
     
-    # logger.info(shortcut)
+    logger.debug(f"INPUTS: {inputs}")
+
+    try:
+        extend_thread(client, member_id=inputs["member_id"], channel_id=inputs["message_ts"]["channel_id"], message_ts=inputs["message_ts"]["message_ts"])
+        complete()
+    except Exception as e:
+        logger.error(f"Error extending thread via workflow: {e}")
+        fail(f"Error extending thread via workflow: {e}")
+
+
+def extend_thread(client, member_id, channel_id, message_ts):
+    current_user = worker.get_user(client, member_id)
 
     # Prep the message history log
     history_entry = {
         "conversation_id": None,
-        "channel_id": shortcut["channel"]["id"],
+        "channel_id": channel_id,
         "user_id": current_user["id"]
     }
     history_row = db.insert("history", history_entry)
     start_time = worker.get_time()
 
     # is this a reply message or a main message - https://api.slack.com/messaging/retrieving#finding_threads 
-    if "thread_ts" in shortcut:
-        # if it's a reply, get the parent message ts
-        main_ts = shortcut["thread_ts"]
-    else:
-        main_ts = shortcut["message_ts"]
+    main_ts = message_ts
 
     temp_message = logistics.send_message(
         client=client,
-        selected_channel=shortcut["channel"]["id"],
+        selected_channel=channel_id,
         post={"message":"Generating conversations..."},
         thread_ts=main_ts
     )
 
     # from the main/parent message, get it and all replies
     thread = client.conversations_replies(
-        channel=shortcut["channel"]["id"],
+        channel=channel_id,
         ts=main_ts,
         include_all_metadata=True
     )
 
-    members_response = client.conversations_members(channel=shortcut["channel"]["id"])
+    members_response = client.conversations_members(channel=channel_id)
     member_ids = members_response["members"]
 
     # Get info for each member to filter out bots
@@ -1398,7 +1390,7 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
 
     # get the channel topic, purpose
     channel = client.conversations_info(
-        channel=shortcut["channel"]["id"]
+        channel=channel_id
     )
     logger.info(channel)
 
@@ -1425,7 +1417,7 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
         try:
             reply_result = logistics.send_message(
                 client=client,
-                selected_channel=shortcut["channel"]["id"],
+                selected_channel=channel_id,
                 post=reply_post,
                 participant=author,
                 thread_ts=main_ts,
@@ -1435,7 +1427,7 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
             if "reacjis" in reply:
                 logistics.send_reacjis(
                     client=client,
-                    channel_id=shortcut["channel"]["id"],
+                    channel_id=channel_id,
                     message_ts=reply_result["ts"],
                     reacji=reply["reacjis"]
                 )
@@ -1457,6 +1449,181 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
     # log an entry to the analytics table
     total_posts_sent = db.fetch_one("SELECT COUNT(*) AS total_posts_sent FROM messages WHERE history_id = %s", (history_row["id"],))["total_posts_sent"]
     db.insert("analytics", {"user_id": current_user["id"], "messages": total_posts_sent})
+
+
+# NOTE: This is a test definition that is a remote workflow step. The step is defined in the App Manager > Workflow Steps, and it's awesome!
+@app.function("hello_world")
+def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
+    ack()
+    user_id = inputs["user_id"]
+    try:
+        output = f"Hello World!"
+        complete({"hello_message": output})
+    except Exception as e:
+        logger.exception(e)
+        fail(f"Failed to complete the step: {e}")
+
+# TODO: build a handler for the message shortcut to add conversation to a thread 
+@app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
+def handle_thread_generate_shortcut(ack, shortcut, client):
+    ack()
+
+    # current_user = worker.get_user(client, shortcut["user"]["id"])
+
+    if "thread_ts" in shortcut:
+        # if it's a reply, get the parent message ts
+        main_ts = shortcut["thread_ts"]
+    else:
+        main_ts = shortcut["message_ts"]
+
+    extend_thread(client, shortcut["user"]["id"], shortcut["channel"]["id"], main_ts)
+    
+    # # logger.info(shortcut)
+
+    # # Prep the message history log
+    # history_entry = {
+    #     "conversation_id": None,
+    #     "channel_id": shortcut["channel"]["id"],
+    #     "user_id": current_user["id"]
+    # }
+    # history_row = db.insert("history", history_entry)
+    # start_time = worker.get_time()
+
+    # # is this a reply message or a main message - https://api.slack.com/messaging/retrieving#finding_threads 
+    
+
+    # temp_message = logistics.send_message(
+    #     client=client,
+    #     selected_channel=shortcut["channel"]["id"],
+    #     post={"message":"Generating conversations..."},
+    #     thread_ts=main_ts
+    # )
+
+    # # from the main/parent message, get it and all replies
+    # thread = client.conversations_replies(
+    #     channel=shortcut["channel"]["id"],
+    #     ts=main_ts,
+    #     include_all_metadata=True
+    # )
+
+    # members_response = client.conversations_members(channel=shortcut["channel"]["id"])
+    # member_ids = members_response["members"]
+
+    # # Get info for each member to filter out bots
+    # human_members = []
+    # for member_id in member_ids:
+    #     try:
+    #         member_info = client.users_info(user=member_id)
+    #         if not member_info["user"]["is_bot"]:
+    #             human_members.append(member_id)
+    #     except Exception as e:
+    #         logger.error(f"Error getting info for member {member_id}: {e}")
+    #         continue
+
+    # # limit the thread to 5 members
+    # conversation_participants = random.sample(human_members, max(len(human_members), 5))
+
+    # logger.info(thread)
+    # # iterate on this and build a message from:
+    # # - thread["messages"][i]["text"]
+    # # - thread["messages"][i]["username"]
+    # # @-mentions in additional threaded replies may not work!
+    # thread_messages = []
+    # for message in thread["messages"]:
+    #     logger.info(message)
+    #     if "subtype" in message and message["subtype"] == "bot_message":
+    #         logger.info(f"Bot message detected: {message['text']}")
+    #         # this is from a bot, so get the username and display image for use later!
+    #         # will need to lookup the user to get their ID in order to support mentions in replies
+    #         # lets get the user now!
+    #         # user = worker._get_user_by_name(message["username"])
+    #         if message.get("metadata", {}).get("event_type") in ["converse_message_posted", "converse_reply_posted"]:
+    #             # we have user info to use!
+    #             author_id = message["metadata"]["event_payload"]["actor_id"]
+    #         else:
+    #             author_id = "" 
+
+    #         thread_messages.append({
+    #             "text": message["text"],
+    #             "author_type": "bot",
+    #             "user": {
+    #                 "id": author_id
+    #             }
+    #         })
+    #     else:
+    #         # this is from a real human, so get their user id for lookup later!
+    #         thread_messages.append({
+    #             "text": message["text"],
+    #             "author_type": "user",
+    #             "user": {
+    #                 "id": message["user"]
+    #             }
+    #             # "username": message["user_profile"]["display_name"]
+    #         })
+    # # ^^ this is the context for the additional replies!
+    # logger.info(thread_messages)
+
+    # # get the channel topic, purpose
+    # channel = client.conversations_info(
+    #     channel=shortcut["channel"]["id"]
+    # )
+    # logger.info(channel)
+
+    # # pass messages to the AI as context and get additional replies
+    # new_replies = factory.continue_thread(
+    #     description=channel["description"],
+    #     topic=channel["topic"],
+    #     thread=thread_messages,
+    #     members=human_members
+    # )
+
+    # for reply in new_replies:
+    #     reply["author"] = ''.join(c for c in reply["author"] if c.isalnum())
+    #     logger.info(f"Getting user infor for {reply['author']}")
+    #     author_full_info = client.users_info(user=reply["author"])
+    #     reply_post = {
+    #         "message": reply["message"]
+    #     }
+    #     author = {
+    #         "id": reply["author"],
+    #         "real_name": author_full_info["user"].get('real_name', ''),
+    #         "avatar": author_full_info["user"]["profile"].get('image_192', '')
+    #     }
+    #     try:
+    #         reply_result = logistics.send_message(
+    #             client=client,
+    #             selected_channel=shortcut["channel"]["id"],
+    #             post=reply_post,
+    #             participant=author,
+    #             thread_ts=main_ts,
+    #             history_id=history_row["id"]
+    #         )
+
+    #         if "reacjis" in reply:
+    #             logistics.send_reacjis(
+    #                 client=client,
+    #                 channel_id=shortcut["channel"]["id"],
+    #                 message_ts=reply_result["ts"],
+    #                 reacji=reply["reacjis"]
+    #             )
+    #     except Exception as e:
+    #         logger.error(f"Error sending reply: {e}")
+    
+    # # logger.debug(temp_message)
+    # # Delete the temp message
+    # client.chat_delete(
+    #     channel=temp_message["channel"],
+    #     ts=temp_message["ts"]
+    # )
+
+    # # update the history for query time
+    # query_time = worker.get_time() - start_time
+    # logger.info(f"Start time = {start_time}; query time: {query_time}")
+    # db.update("history", {"query_time": query_time}, {"id": history_row["id"]})
+
+    # # log an entry to the analytics table
+    # total_posts_sent = db.fetch_one("SELECT COUNT(*) AS total_posts_sent FROM messages WHERE history_id = %s", (history_row["id"],))["total_posts_sent"]
+    # db.insert("analytics", {"user_id": current_user["id"], "messages": total_posts_sent})
 
 
 # TODO: build a handler to add content to a channel. First show a modal if the context of the current channel cannot be determined
