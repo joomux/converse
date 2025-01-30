@@ -42,9 +42,11 @@ def update_home_tab(client, event, logger):
     try:
         # Fetch builder options from the database for this user
         user_id = event["user"]
-        
+        # Fetch team ID
+        app_installed_team_id = event["view"]["app_installed_team_id"]
+
         # Retrieve the builder options from the database
-        builder_options = get_user_selections(user_id)  
+        builder_options = get_user_selections(user_id, app_installed_team_id)  
 
         # Path to home_tab.json Block Kit template
         file_path = os.path.join("block_kit", "home_tab.json")
@@ -112,19 +114,23 @@ def update_home_tab(client, event, logger):
 def handle_enter_builder_mode(ack, body, client):
     ack()
     try:
+        # Extract app_installed_team_id
+        app_installed_team_id = body["view"].get("app_installed_team_id")
+        
         # Update the App Home
-        update_app_home_to_builder_mode(client, body["user"]["id"])
+        update_app_home_to_builder_mode(client, body["user"]["id"], app_installed_team_id)
     except Exception as e:
         logger.error(f"Error updating App Home to builder mode: {e}")
 
-def update_app_home_to_builder_mode(client, user_id):
+
+def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
     # Load the builder mode view JSON
     view_path = os.path.join("block_kit", "builder_mode.json")
     with open(view_path, "r") as file:
         builder_view = json.load(file)
 
-    # Retrieve user selections from the database
-    builder_options = get_user_selections(user_id)  # Returns JSON like {"multi_static_select-action": ["option-channels", "option-users"]}
+    # Retrieve user selections from the database, passing app_installed_team_id
+    builder_options = get_user_selections(user_id, app_installed_team_id)  # Pass the app_installed_team_id here
 
     # If selections are available, update the builder view with the selected options
     if builder_options:
@@ -137,7 +143,7 @@ def update_app_home_to_builder_mode(client, user_id):
                 # Filter the options based on selected values, add them to initial_options
                 accessory["initial_options"] = [
                     option for option in accessory["options"] if option["value"] in selected_values
-            ]
+                ]
 
     # Update the App Home with the modified builder view
     try:
@@ -148,40 +154,59 @@ def update_app_home_to_builder_mode(client, user_id):
     except SlackApiError as e:
         logger.error(f"Error updating App Home: {e}")
 
-
 @app.action("save_exit_builder_mode")
-def handle_enter_builder_mode(ack, body, client):
+def handle_save_exit_builder_mode(ack, body, client):
     ack()
     try:
-        # Update the App Home
-        user_id = body["user"]["id"]
-        # Reuse the update_home_tab function to ensure consistency
-        update_home_tab(client, {"user": user_id}, logger)
+        # Log the entire body for debugging
+        #logger.debug(f"Received body in save_exit_builder_mode: {json.dumps(body, indent=2)}")
+
+        # Extract app_installed_team_id safely
+        app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
+
+        if not app_installed_team_id:
+            logger.error("app_installed_team_id not found in body")
+            return
+        
+        # Extract user ID safely
+        user_id = body.get("user", {}).get("id")
+        
+        if not user_id:
+            logger.error("User ID not found in body")
+            return
+        
+        # Create an event-like dictionary for update_home_tab
+        event = {
+            "user": user_id,
+            "view": {"app_installed_team_id": app_installed_team_id}
+        }
+
+        # Call update_home_tab with the correct parameters
+        update_home_tab(client, event, logger)
     except Exception as e:
         logger.error(f"Error exiting builder mode: {e}")
 
-def save_exit_builder_mode(client, user_id):
-    # Load the home tab view JSON
-    view_path = os.path.join("block_kit", "home_tab.json")
-    with open(view_path, "r") as file:
-        builder_view = json.load(file)
-
-    # Update the App Home
-    try:
-        client.views_publish(
-            user_id=user_id,
-            view=builder_view
-        )
-    except SlackApiError as e:
-        logger.error(f"Error updating App Home: {e}")
 
 @app.action("multi_static_select-action")
 def handle_some_action(ack, body, logger):
     ack()
     try:
         # Get user ID and selections
-        user_id = body["user"]["id"]
-        selections = body["view"]["state"]["values"]
+        user_id = body.get("user", {}).get("id")
+        app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
+        selections = body.get("view", {}).get("state", {}).get("values", {})
+
+        if user_id is None:
+            logger.error("User ID not found in the request body")
+            return  # or handle this error case appropriately
+
+        if app_installed_team_id is None:
+            logger.error("app_installed_team_id not found in the request body")
+            return  # or handle this error case appropriately
+
+        if not selections:
+            logger.error("No selections found in the request body")
+            return  # or handle this error case appropriately
 
         # Extract specific IDs or values from the selections
         selected_values = {}
@@ -191,7 +216,7 @@ def handle_some_action(ack, body, logger):
                     selected_values[action_id] = [option["value"] for option in action["selected_options"]]
 
         # Save the selections to the database
-        save_user_selections(user_id, selected_values)
+        save_user_selections(user_id, app_installed_team_id, selected_values)
         
         # Log the successful save
         logger.info(f"Successfully saved selections for user {user_id}")
@@ -212,7 +237,7 @@ def test_connection():
         logger.error(f"Failed to connect to the database: {e}")
         return False
 
-def save_user_selections(user_id, selections):
+def save_user_selections(user_id, app_installed_team_id, selections):
 
     if not test_connection():
         logger.error("Aborting: Unable to connect to the database.")
@@ -220,12 +245,12 @@ def save_user_selections(user_id, selections):
     
     try:
         query = text("""
-            INSERT INTO user_builder_selections (user_id, builder_options, last_updated)
-            VALUES (:user_id, :builder_options, :last_updated)
-            ON CONFLICT (user_id) 
+            INSERT INTO user_builder_selections (user_id, builder_options, last_updated, app_installed_team_id)
+            VALUES (:user_id, :builder_options, :last_updated, :app_installed_team_id)
+            ON CONFLICT (user_id, app_installed_team_id) 
             DO UPDATE SET 
-                builder_options = :builder_options,
-                last_updated = :last_updated
+                builder_options = EXCLUDED.builder_options,
+                last_updated = EXCLUDED.last_updated
         """)
         #logger.debug(f"Executing query for user_id {user_id}: {selections}")
         
@@ -233,7 +258,8 @@ def save_user_selections(user_id, selections):
             conn.execute(query, {
                 "user_id": user_id,
                 "builder_options": json.dumps(selections),  # Convert selections to JSON string
-                "last_updated": datetime.now(timezone.utc)  # Use timezone-aware datetime
+                "last_updated": datetime.now(timezone.utc),  # Use timezone-aware datetime
+                "app_installed_team_id": app_installed_team_id
             })
             conn.commit()
         logger.debug(f"Successfully saved selections for user_id {user_id}")
@@ -241,12 +267,12 @@ def save_user_selections(user_id, selections):
         logger.error(f"Error saving builder mode selections: {e}")
 
 # Retrieve "builder mode" users selections
-def get_user_selections(user_id):
+def get_user_selections(user_id, app_installed_team_id):
     try:
-        query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id")
+        query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
         with engine.connect() as conn:
-            result = conn.execute(query, {"user_id": user_id}).fetchone()
-            logger.info(f"Query result for user {user_id}: {result}")
+            result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
+            logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {result}")
             if result and result[0]:
                 return result[0]
             return None
