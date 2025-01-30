@@ -1134,6 +1134,10 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
         query_time = worker.get_time() - start_time
         logger.info(f"Start time = {start_time}; query time: {query_time}")
         db.update("history", {"query_time": query_time}, {"id": history_row["id"]})
+
+        # log an entry to the analytics table
+        total_posts_sent = db.fetch_one("SELECT COUNT(*) AS total_posts_sent FROM messages WHERE history_id = %s", (history_row["id"],))["total_posts_sent"]
+        db.insert("analytics", {"user_id": current_user["id"], "messages": total_posts_sent})
         
         # TODO: Save conversation definition if selected
 
@@ -1449,6 +1453,10 @@ def handle_thread_generate_shortcut(ack, shortcut, client):
     query_time = worker.get_time() - start_time
     logger.info(f"Start time = {start_time}; query time: {query_time}")
     db.update("history", {"query_time": query_time}, {"id": history_row["id"]})
+
+    # log an entry to the analytics table
+    total_posts_sent = db.fetch_one("SELECT COUNT(*) AS total_posts_sent FROM messages WHERE history_id = %s", (history_row["id"],))["total_posts_sent"]
+    db.insert("analytics", {"user_id": current_user["id"], "messages": total_posts_sent})
 
 
 # TODO: build a handler to add content to a channel. First show a modal if the context of the current channel cannot be determined

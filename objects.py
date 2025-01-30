@@ -30,11 +30,11 @@ class Database:
     def __init__(self, config: DatabaseConfig):
         self.config = config
         self._conn = None
-        logger.info(f"DB HOST: {config.host}")
-        logger.info(f"DB port: {config.port}")
-        logger.info(f"DB database: {config.database}")
-        logger.info(f"DB user: {config.user}")
-        logger.info(f"DB password: {config.password}")
+        # logger.info(f"DB HOST: {config.host}")
+        # logger.info(f"DB port: {config.port}")
+        # logger.info(f"DB database: {config.database}")
+        # logger.info(f"DB user: {config.user}")
+        # logger.info(f"DB password: {config.password}")
 
     @contextmanager
     def connection(self):
