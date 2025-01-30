@@ -939,8 +939,6 @@ def handle_conversation_generator_submission(ack, body, client, view, logger):
     ack()
     
     current_user = worker.get_user(client, body["user"]["id"])
-    # begin history logging!
-
 
     # Initialize original_view_info outside try block
     original_view_info = None
@@ -1302,14 +1300,16 @@ def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Compl
 @app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
 def handle_thread_generate_shortcut(ack, shortcut, client):
     ack()
+
+    current_user = worker.get_user(client, shortcut["user"]["id"])
     
-    logger.info(shortcut)
+    # logger.info(shortcut)
 
     # Prep the message history log
     history_entry = {
         "conversation_id": None,
         "channel_id": shortcut["channel"]["id"],
-        "user_id": shortcut["user"]["id"]
+        "user_id": current_user["id"]
     }
     history_row = db.insert("history", history_entry)
     start_time = worker.get_time()
