@@ -100,7 +100,7 @@ def update_home_tab(client, event, logger):
                     view["blocks"][3]["elements"] = [
                         {
                             "type": "mrkdwn",
-                            "text": ":no_entry_sign: Current custom demo config: *No selections.*"
+                            "text": ":no_entry_sign: Demo components currently configured: *No selections.*"
                         }
                     ]
             else:
@@ -108,7 +108,7 @@ def update_home_tab(client, event, logger):
                 view["blocks"][3]["elements"] = [
                     {
                         "type": "mrkdwn",
-                        "text": ":no_entry_sign: Current custom demo config: *No selections.*"
+                        "text": ":no_entry_sign: Demo components currently configured: *No selections.*"
                     }
                 ]
 
