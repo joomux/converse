@@ -92,7 +92,7 @@ def update_home_tab(client, event, logger):
                     view["blocks"][3]["elements"] = [
                         {
                             "type": "mrkdwn",
-                            "text": f":eight_spoked_asterisk: Current custom demo config: {options_str}"
+                            "text": f"Demo components currently configured: {options_str}"
                         }
                     ]
                 else:
@@ -205,10 +205,20 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
                         "type": "button",
                         "text": {
                             "type": "plain_text",
-                            "text": "Setup Conversations"
+                            "text": "Configure"
                         },
                         "value": "setup-convo",
                         "action_id": "setup-convo"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-convo",
+                        "action_id": "generate-convo"
                     }
                 ]
             }
@@ -238,10 +248,20 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
                         "type": "button",
                         "text": {
                             "type": "plain_text",
-                            "text": "Setup Channels"
+                            "text": "Configure"
                         },
                         "value": "setup-channels",
                         "action_id": "setup-channels"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-channels",
+                        "action_id": "generate-channels"
                     }
                 ]
             }
@@ -271,10 +291,20 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
                         "type": "button",
                         "text": {
                             "type": "plain_text",
-                            "text": "Setup Users"
+                            "text": "Configure"
                         },
                         "value": "setup-users",
                         "action_id": "setup-users"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-users",
+                        "action_id": "generate-users"
                     }
                 ]
             }
@@ -304,10 +334,20 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
                         "type": "button",
                         "text": {
                             "type": "plain_text",
-                            "text": "Setup Canvases"
+                            "text": "Configure"
                         },
                         "value": "setup-canvas",
                         "action_id": "setup-canvas"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-canvas",
+                        "action_id": "generate-canvas"
                     }
                 ]
             }
@@ -337,11 +377,21 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
                             "type": "button",
                             "text": {
                                 "type": "plain_text",
-                                "text": "Setup Apps"
+                                "text": "Configure"
                             },
                             "value": "setup-apps",
                             "action_id": "setup-apps"
-                        }
+                        },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-apps",
+                        "action_id": "generate-apps"
+                    }
                     ]
                 }
                 builder_view["blocks"].append(apps_divider_block)

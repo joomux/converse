@@ -21,7 +21,7 @@
             "elements": [
                 {
                     "text": {
-                        "text": "⇥ Enter Builder Mode",
+                        "text": ":toolbox: Enter Builder Mode",
                         "type": "plain_text",
                         "emoji": true
                     },
@@ -47,18 +47,6 @@
                 "type": "mrkdwn",
                 "text": "​ "
             }
-        },
-        {
-            "type": "divider"
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "_Developed by Jeremy Roberts and Andrew Nikolic • for questions and feedback visit #proj-slack-demo-generator_"
-                }
-            ]
         }
     ]
 }
