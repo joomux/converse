@@ -45,14 +45,18 @@ def update_home_tab(client, event, logger):
         # Fetch team ID
         app_installed_team_id = event["view"]["app_installed_team_id"]
 
-        # Retrieve the builder options and mode from the database
-        user_data = get_user_selections(user_id, app_installed_team_id)
-
-        # Check if the user is in builder mode
-        if user_data and user_data.get("mode") == "builder":
+        # Retrieve the mode from the database
+        query = text("SELECT mode FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
+        with engine.connect() as conn:
+            result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
+        
+        mode = result[0] if result else None
+        logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {mode}")
+    
+        if mode == "builder":
             # User is in builder mode, show builder view
             update_app_home_to_builder_mode(client, user_id, app_installed_team_id)
-            return
+
         else:
 
             # Retrieve the builder options from the database
