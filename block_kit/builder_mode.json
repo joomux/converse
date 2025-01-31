@@ -60,6 +60,14 @@
 					{
 						"text": {
 							"type": "plain_text",
+							"text": "Conversations",
+							"emoji": true
+						},
+						"value": "option-convo"
+					},
+					{
+						"text": {
+							"type": "plain_text",
 							"text": "Channels",
 							"emoji": true
 						},
@@ -127,18 +135,6 @@
 				"type": "mrkdwn",
 				"text": "​"
 			}
-		},
-		{
-			"type": "divider"
-		},
-		{
-			"type": "context",
-			"elements": [
-				{
-					"type": "mrkdwn",
-					"text": "_Developed by Jeremy Roberts and Andrew Nikolic • for questions and feedback visit #proj-slack-demo-generator_"
-				}
-			]
 		}
 	]
 }

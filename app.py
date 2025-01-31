@@ -45,6 +45,15 @@ def update_home_tab(client, event, logger):
         # Fetch team ID
         app_installed_team_id = event["view"]["app_installed_team_id"]
 
+        # Retrieve the builder options and mode from the database
+        user_data = get_user_selections(user_id, app_installed_team_id)
+
+        # Check if the user is in builder mode
+        if user_data and user_data.get("mode") == "builder":
+            # User is in builder mode, show builder view
+            update_app_home_to_builder_mode(client, user_id, app_installed_team_id)
+            return
+
         # Retrieve the builder options from the database
         builder_options = get_user_selections(user_id, app_installed_team_id)  
 
@@ -57,6 +66,7 @@ def update_home_tab(client, event, logger):
 
         # Mapping dictionary
         option_mapping = {
+            "option-convo":"*Conversations*",
             "option-channels": "*Channels*",
             "option-users": "*Users*",
             "option-canvas": "*Canvas*",
@@ -111,11 +121,31 @@ def update_home_tab(client, event, logger):
 
 
 @app.action("enter_builder_mode_button")
-def handle_enter_builder_mode(ack, body, client):
+def handle_enter_builder_mode(ack, body, client, mode):
     ack()
     try:
         # Extract app_installed_team_id
         app_installed_team_id = body["view"].get("app_installed_team_id")
+
+        # Extract app_installed_team_id and user_id
+        app_installed_team_id = body["view"].get("app_installed_team_id")
+        user_id = body["user"]["id"]
+
+        query = text("""
+            UPDATE user_builder_selections 
+            SET mode = 'builder', last_updated = :last_updated
+            WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
+        """)
+        
+        with engine.connect() as conn:
+            conn.execute(query, {
+                "user_id": user_id,
+                "app_installed_team_id": app_installed_team_id,
+                "mode": mode,
+                "last_updated": datetime.now(timezone.utc)
+            })
+            conn.commit()
+        logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
         
         # Update the App Home
         update_app_home_to_builder_mode(client, body["user"]["id"], app_installed_team_id)
@@ -140,10 +170,185 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
         for block in builder_view["blocks"]:
             if "accessory" in block and block["accessory"].get("type") == "multi_static_select":
                 accessory = block["accessory"]
-                # Filter the options based on selected values, add them to initial_options
-                accessory["initial_options"] = [
-                    option for option in accessory["options"] if option["value"] in selected_values
+                if selected_values:
+                    # Filter the options based on selected values, add them to initial_options
+                    accessory["initial_options"] = [
+                        option for option in accessory["options"] if option["value"] in selected_values
+                    ]
+                else:
+                    # Remove initial_options if no options are selected
+                    if "initial_options" in accessory:
+                        del accessory["initial_options"]
+   
+  # Check if "Conversations" is selected and add additional Block Kit elements
+        if "option-convo" in selected_values:
+            # Append blocks for conversations
+            convo_divider_block = {
+                "type": "divider"
+            }
+    
+            convo_title_block = {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Conversations"
+                }
+		    }
+
+            convo_button_block = { 
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Setup Conversations"
+                        },
+                        "value": "setup-convo",
+                        "action_id": "setup-convo"
+                    }
                 ]
+            }
+            builder_view["blocks"].append(convo_divider_block)
+            builder_view["blocks"].append(convo_title_block)
+            builder_view["blocks"].append(convo_button_block)
+            logger.debug("Added additional block for Conversations")
+
+        # Check if "Channels" is selected and add additional Block Kit elements
+        if "option-channels" in selected_values:
+            channels_divider_block = {
+                "type": "divider"
+            }
+    
+            channels_title_block = {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Channels"
+                }
+		    }
+
+            channels_button_block = { 
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Setup Channels"
+                        },
+                        "value": "setup-channels",
+                        "action_id": "setup-channels"
+                    }
+                ]
+            }
+            builder_view["blocks"].append(channels_divider_block)
+            builder_view["blocks"].append(channels_title_block)
+            builder_view["blocks"].append(channels_button_block)
+            logger.debug("Added additional block for Channels")
+
+       # Check if "Users" is selected and add additional Block Kit elements
+        if "option-users" in selected_values:
+            users_divider_block = {
+                "type": "divider"
+            }
+    
+            users_title_block = {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Users"
+                }
+		    }
+
+            users_button_block = {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Setup Users"
+                        },
+                        "value": "setup-users",
+                        "action_id": "setup-users"
+                    }
+                ]
+            }
+            builder_view["blocks"].append(users_divider_block)
+            builder_view["blocks"].append(users_title_block)
+            builder_view["blocks"].append(users_button_block)
+            logger.debug("Added additional block for Users")
+
+        # Check if "Canvas" is selected and add additional Block Kit elements
+        if "option-canvas" in selected_values:
+            canvas_divider_block = {
+                "type": "divider"
+            }
+    
+            canvas_title_block = {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Canvas"
+                }
+		    }
+
+            canvas_button_block = {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Setup Canvases"
+                        },
+                        "value": "setup-canvas",
+                        "action_id": "setup-canvas"
+                    }
+                ]
+            }
+            builder_view["blocks"].append(canvas_divider_block)
+            builder_view["blocks"].append(canvas_title_block)
+            builder_view["blocks"].append(canvas_button_block)
+            logger.debug("Added additional block for Canvas")
+
+        # Check if "Apps" is selected and add additional Block Kit elements
+        if "option-apps" in selected_values:
+                apps_divider_block = {
+                    "type": "divider"
+                }
+        
+                apps_title_block = {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Apps"
+                    }
+                }
+
+                apps_button_block = {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Setup Apps"
+                            },
+                            "value": "setup-apps",
+                            "action_id": "setup-apps"
+                        }
+                    ]
+                }
+                builder_view["blocks"].append(apps_divider_block)
+                builder_view["blocks"].append(apps_title_block)
+                builder_view["blocks"].append(apps_button_block)
+                logger.debug("Added additional block for Apps")
+
+
+    # Log the modified builder view JSON
+    logger.debug(f"Modified builder view JSON: {json.dumps(builder_view, indent=2)}")
 
     # Update the App Home with the modified builder view
     try:
@@ -155,7 +360,7 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
         logger.error(f"Error updating App Home: {e}")
 
 @app.action("save_exit_builder_mode")
-def handle_save_exit_builder_mode(ack, body, client):
+def handle_save_exit_builder_mode(ack, body, client, mode):
     ack()
     try:
         # Log the entire body for debugging
@@ -181,6 +386,22 @@ def handle_save_exit_builder_mode(ack, body, client):
             "view": {"app_installed_team_id": app_installed_team_id}
         }
 
+        query = text("""
+            UPDATE user_builder_selections 
+            SET mode = 'home', last_updated = :last_updated
+            WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
+        """)
+        
+        with engine.connect() as conn:
+            conn.execute(query, {
+                "user_id": user_id,
+                "app_installed_team_id": app_installed_team_id,
+                "mode": mode,
+                "last_updated": datetime.now(timezone.utc)
+            })
+            conn.commit()
+        logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
+
         # Call update_home_tab with the correct parameters
         update_home_tab(client, event, logger)
     except Exception as e:
@@ -188,13 +409,14 @@ def handle_save_exit_builder_mode(ack, body, client):
 
 
 @app.action("multi_static_select-action")
-def handle_some_action(ack, body, logger):
+def handle_some_action(ack, body, client, logger):
     ack()
     try:
         # Get user ID and selections
         user_id = body.get("user", {}).get("id")
         app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
         selections = body.get("view", {}).get("state", {}).get("values", {})
+        app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
 
         if user_id is None:
             logger.error("User ID not found in the request body")
@@ -221,6 +443,9 @@ def handle_some_action(ack, body, logger):
         # Log the successful save
         logger.info(f"Successfully saved selections for user {user_id}")
         
+        # Reload the builder mode app view
+        update_app_home_to_builder_mode(client, user_id, app_installed_team_id)
+
     except Exception as e:
         logger.error(f"Error saving builder mode selections: {e}")
 
@@ -237,7 +462,7 @@ def test_connection():
         logger.error(f"Failed to connect to the database: {e}")
         return False
 
-def save_user_selections(user_id, app_installed_team_id, selections):
+def save_user_selections(user_id, app_installed_team_id, selections, mode='builder'):
 
     if not test_connection():
         logger.error("Aborting: Unable to connect to the database.")
@@ -245,12 +470,13 @@ def save_user_selections(user_id, app_installed_team_id, selections):
     
     try:
         query = text("""
-            INSERT INTO user_builder_selections (user_id, builder_options, last_updated, app_installed_team_id)
-            VALUES (:user_id, :builder_options, :last_updated, :app_installed_team_id)
+            INSERT INTO user_builder_selections (user_id, builder_options, last_updated, app_installed_team_id, mode)
+            VALUES (:user_id, :builder_options, :last_updated, :app_installed_team_id, :mode)
             ON CONFLICT (user_id, app_installed_team_id) 
             DO UPDATE SET 
                 builder_options = EXCLUDED.builder_options,
                 last_updated = EXCLUDED.last_updated
+                mode = EXCLUDED.mode
         """)
         #logger.debug(f"Executing query for user_id {user_id}: {selections}")
         
@@ -259,22 +485,23 @@ def save_user_selections(user_id, app_installed_team_id, selections):
                 "user_id": user_id,
                 "builder_options": json.dumps(selections),  # Convert selections to JSON string
                 "last_updated": datetime.now(timezone.utc),  # Use timezone-aware datetime
-                "app_installed_team_id": app_installed_team_id
+                "app_installed_team_id": app_installed_team_id,
+                "mode": mode 
             })
             conn.commit()
         logger.debug(f"Successfully saved selections for user_id {user_id}")
     except Exception as e:
-        logger.error(f"Error saving builder mode selections: {e}")
+        logger.error(f"Error saving builder mode selections and mode: {e}")
 
 # Retrieve "builder mode" users selections
 def get_user_selections(user_id, app_installed_team_id):
     try:
-        query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
+        query = text("SELECT builder_options, mode FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
         with engine.connect() as conn:
             result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
             logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {result}")
             if result and result[0]:
-                return result[0]
+                return {"builder_options": result[0], "mode": result[1]}
             return None
     except Exception as e:
         logger.error(f"Error getting user selections: {e}")
