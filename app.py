@@ -73,7 +73,6 @@ def update_home_tab(client, event, logger):
             option_mapping = {
                 "option-convo":"*Conversations*",
                 "option-channels": "*Channels*",
-                "option-users": "*Users*",
                 "option-canvas": "*Canvas*",
                 "option-apps": "*Apps*"
             }
@@ -147,7 +146,6 @@ def handle_enter_builder_mode(ack, body, client, mode):
                 "mode": mode,
                 "last_updated": datetime.now(timezone.utc)
             })
-            conn.commit()
         logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
         
         # Update the App Home
@@ -269,49 +267,6 @@ def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
             builder_view["blocks"].append(channels_title_block)
             builder_view["blocks"].append(channels_button_block)
             logger.debug("Added additional block for Channels")
-
-       # Check if "Users" is selected and add additional Block Kit elements
-        if "option-users" in selected_values:
-            users_divider_block = {
-                "type": "divider"
-            }
-    
-            users_title_block = {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "Users"
-                }
-		    }
-
-            users_button_block = {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Configure"
-                        },
-                        "value": "setup-users",
-                        "action_id": "setup-users"
-                    },
-                    {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": ":sparkles: Generate"
-                        },
-                        "style": "primary",
-                        "value": "generate-users",
-                        "action_id": "generate-users"
-                    }
-                ]
-            }
-            builder_view["blocks"].append(users_divider_block)
-            builder_view["blocks"].append(users_title_block)
-            builder_view["blocks"].append(users_button_block)
-            logger.debug("Added additional block for Users")
 
         # Check if "Canvas" is selected and add additional Block Kit elements
         if "option-canvas" in selected_values:
@@ -452,7 +407,6 @@ def handle_save_exit_builder_mode(ack, body, client, mode):
                 "mode": mode,
                 "last_updated": datetime.now(timezone.utc)
             })
-            conn.commit()
         logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
 
         # Call update_home_tab with the correct parameters

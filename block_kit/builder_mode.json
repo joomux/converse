@@ -76,14 +76,6 @@
 					{
 						"text": {
 							"type": "plain_text",
-							"text": "Users",
-							"emoji": true
-						},
-						"value": "option-users"
-					},
-					{
-						"text": {
-							"type": "plain_text",
 							"text": "Canvas",
 							"emoji": true
 						},
