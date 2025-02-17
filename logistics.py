@@ -1,11 +1,16 @@
 from slack_sdk.errors import SlackApiError
+from objects import Database, DatabaseConfig
+from typing import Dict, Any
 import logging
 import time
+import worker
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def _send_conversation(client, selected_channel: str, post: list|dict, participant_info: dict):
+    db = Database(DatabaseConfig())
+
     post_results = []
     reply_results = []
 
@@ -37,19 +42,29 @@ def _send_conversation(client, selected_channel: str, post: list|dict, participa
         # logger.debug(f"Participant: {participant}")
         # logger.debug("--------------------------------")
         # Post the main message
-        main_post = client.chat_postMessage(
-            channel=selected_channel,
-            text=post["message"],
-            username=participant["real_name"],
-            icon_url=participant["avatar"],
-            metadata={
-                "event_type": "converse_message_posted",
-                "event_payload": {
-                    "actor_id": participant["id"],
-                    "actor_name": participant["real_name"],
-                    "avatar": participant["avatar"]
-                }
-            }
+        # main_post = client.chat_postMessage(
+        #     channel=selected_channel,
+        #     text=post["message"],
+        #     username=participant["real_name"],
+        #     icon_url=participant["avatar"],
+        #     metadata={
+        #         "event_type": "converse_message_posted",
+        #         "event_payload": {
+        #             "actor_id": participant["id"],
+        #             "actor_name": participant["real_name"],
+        #             "avatar": participant["avatar"]
+        #         }
+        #     }
+        # )
+
+        logger.debug(f"POSTING {post}")
+        main_post = send_message(
+            client=client,
+            selected_channel=selected_channel,
+            post=post,
+            participant=participant,
+            thread_ts=False,
+            history_id=post["history"]["id"]
         )
 
         post_results.append(main_post)
@@ -85,21 +100,29 @@ def _send_conversation(client, selected_channel: str, post: list|dict, participa
                 # logger.debug(f"Participant: {reply_participant}")
                 # logger.debug("--------------------------------")
 
-                reply_post = client.chat_postMessage(
-                    channel=selected_channel,
-                    thread_ts=main_post["ts"],
-                    text=reply["message"],
-                    username=reply_participant["real_name"],
-                    icon_url=reply_participant["avatar"],
-                    metadata={
-                        "event_type": "converse_reply_posted",
-                        "event_payload": {
-                            "actor_id": reply_participant["id"],
-                            "actor_name": reply_participant["real_name"],
-                            "avatar": reply_participant["avatar"]
-                        }
-                    }
+                # reply_post = client.chat_postMessage(
+                #     channel=selected_channel,
+                #     thread_ts=main_post["ts"],
+                #     text=reply["message"],
+                #     username=reply_participant["real_name"],
+                #     icon_url=reply_participant["avatar"],
+                #     metadata={
+                #         "event_type": "converse_reply_posted",
+                #         "event_payload": {
+                #             "actor_id": reply_participant["id"],
+                #             "actor_name": reply_participant["real_name"],
+                #             "avatar": reply_participant["avatar"]
+                #         }
+                #     }
+                # )
 
+                reply_post = send_message(
+                    client=client,
+                    selected_channel=selected_channel,
+                    post=reply,
+                    participant=reply_participant,
+                    thread_ts=main_post["ts"],
+                    history_id=post["history"]["id"]
                 )
 
                 reply_results.append(reply_post)
@@ -194,27 +217,62 @@ def _send_channels(client: dict, user_id: str, channels_list: list):
     return created_channels
 
 
-def send_message(client, selected_channel: str, post: dict, participant: dict, thread_ts: str):
+def send_message(client, selected_channel: str, post: dict, participant: dict = None, thread_ts: str = False, history_id: int = None):
     event_type = "converse_reply_posted" if thread_ts else "converse_message_posted"
-    
+    db = Database(DatabaseConfig())
     try:
-        return client.chat_postMessage(
-            channel=selected_channel,
-            text=post["message"],
-            username=participant["real_name"],
-            icon_url=participant["avatar"],
-            thread_ts=thread_ts if thread_ts else False,
-            metadata={
-                "event_type": event_type,
-                "event_payload": {
-                    "actor_id": participant["id"],
-                    "actor_name": participant["real_name"],
-                    "avatar": participant["avatar"]
-                }
-            }
-        )
+        if participant:
+            if thread_ts:
+                api_result = client.chat_postMessage(
+                    channel=selected_channel,
+                    text=post["message"],
+                    username=participant["real_name"],
+                    icon_url=participant["avatar"],
+                    thread_ts=thread_ts if thread_ts else False,
+                    metadata={
+                        "event_type": event_type,
+                        "event_payload": {
+                            "actor_id": participant["id"],
+                            "actor_name": participant["real_name"],
+                            "avatar": participant["avatar"]
+                        }
+                    }
+                )
+            else:
+                api_result = client.chat_postMessage(
+                    channel=selected_channel,
+                    text=post["message"],
+                    username=participant["real_name"],
+                    icon_url=participant["avatar"],
+                    metadata={
+                        "event_type": event_type,
+                        "event_payload": {
+                            "actor_id": participant["id"],
+                            "actor_name": participant["real_name"],
+                            "avatar": participant["avatar"]
+                        }
+                    }
+                )
+
+            # Log the message to the database
+            message_ts = api_result["ts"]
+            db.insert("messages", {
+                "message_ts": message_ts,
+                "history_id": history_id if history_id else 0
+            })
+            return api_result
+        else:
+            api_result = client.chat_postMessage(
+                channel=selected_channel,
+                text=post["message"],
+                thread_ts=thread_ts if thread_ts else False,
+            )
+            return api_result
+
     except SlackApiError as e:
         logger.error(f"Error sending message: {e}")
+    except Exception as e:
+        logger.error(f"Error in send_message: {e}")
     
 
 def send_reacjis(client, channel_id, message_ts: str, reacji):

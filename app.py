@@ -1,4 +1,4 @@
-from slack_bolt import App
+from slack_bolt import App, Ack, Fail, Complete, Say
 from slack_sdk.errors import SlackApiError
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import os
@@ -8,16 +8,19 @@ import random
 import json
 import logging
 import time
+from datetime import datetime, timezone
 import factory
 import logistics
 import worker
-from sqlalchemy import create_engine
-from sqlalchemy.sql import text
-from datetime import datetime, timezone
+import conversation
+from objects import Database, DatabaseConfig
+from typing import Dict, Any
 
-# Set up root logging
-logging.basicConfig(level=logging.ERROR)
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+db = Database(DatabaseConfig())
 
 # Load environment variables
 load_dotenv()
@@ -46,9 +49,13 @@ def update_home_tab(client, event, logger):
         app_installed_team_id = event["view"]["app_installed_team_id"]
 
         # Retrieve the mode from the database
-        query = text("SELECT mode FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
-        with engine.connect() as conn:
-            result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
+        # query = text("SELECT mode FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
+        # with engine.connect() as conn:
+        #     result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
+        
+        query = "SELECT mode FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
+        result = db.fetch_one(query, (user_id, app_installed_team_id))
+
         
         mode = result[0] if result else None
         logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {mode}")
@@ -133,26 +140,30 @@ def handle_enter_builder_mode(ack, body, client, mode):
 
         user_id = body["user"]["id"]
 
-        query = text("""
-            UPDATE user_builder_selections 
-            SET mode = 'builder', last_updated = :last_updated
-            WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
-        """)
+        # query = text("""
+        #     UPDATE user_builder_selections 
+        #     SET mode = 'builder', last_updated = :last_updated
+        #     WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
+        # """)
         
-        with engine.connect() as conn:
-            conn.execute(query, {
-                "user_id": user_id,
-                "app_installed_team_id": app_installed_team_id,
-                "mode": mode,
-                "last_updated": datetime.now(timezone.utc)
-            })
+        # with engine.connect() as conn:
+        #     conn.execute(query, {
+        #         "user_id": user_id,
+        #         "app_installed_team_id": app_installed_team_id,
+        #         "mode": mode,
+        #         "last_updated": datetime.now(timezone.utc)
+        #     })
+        
+        db.update(
+            "user_builder_selections", 
+            {"mode": 'builder', "last_updated": datetime.now(timezone.utc)},
+            {"user_id": user_id, "app_installed_team_id": app_installed_team_id})
         logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
         
         # Update the App Home
         update_app_home_to_builder_mode(client, body["user"]["id"], app_installed_team_id)
     except Exception as e:
         logger.error(f"Error updating App Home to builder mode: {e}")
-
 
 def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
     # Load the builder mode view JSON
@@ -394,19 +405,24 @@ def handle_save_exit_builder_mode(ack, body, client, mode):
             "view": {"app_installed_team_id": app_installed_team_id}
         }
 
-        query = text("""
-            UPDATE user_builder_selections 
-            SET mode = 'home', last_updated = :last_updated
-            WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
-        """)
+        # query = text("""
+        #     UPDATE user_builder_selections 
+        #     SET mode = 'home', last_updated = :last_updated
+        #     WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
+        # """)
         
-        with engine.connect() as conn:
-            conn.execute(query, {
-                "user_id": user_id,
-                "app_installed_team_id": app_installed_team_id,
-                "mode": mode,
-                "last_updated": datetime.now(timezone.utc)
-            })
+        # with engine.connect() as conn:
+        #     conn.execute(query, {
+        #         "user_id": user_id,
+        #         "app_installed_team_id": app_installed_team_id,
+        #         "mode": mode,
+        #         "last_updated": datetime.now(timezone.utc)
+        #     })
+        db.update(
+            "user_builder_selections", 
+            {"mode": 'home', "last_updated": datetime.now(timezone.utc)},
+            {"user_id": user_id, "app_installed_team_id": app_installed_team_id}
+        )
         logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
 
         # Call update_home_tab with the correct parameters
@@ -457,43 +473,53 @@ def handle_some_action(ack, body, client, logger):
         logger.error(f"Error saving builder mode selections: {e}")
 
 # Database connection and save "builder mode" selections
-DATABASE_URL = "postgresql://postgres:postgres@localhost/converse2"
-engine = create_engine(DATABASE_URL)
+# DATABASE_URL = "postgresql://postgres:postgres@localhost/converse2"
+# engine = create_engine(DATABASE_URL)
 
-def test_connection():
-    try:
-        with engine.connect() as connection:
-            logger.debug("Database connection successful!")
-            return True
-    except Exception as e:
-        logger.error(f"Failed to connect to the database: {e}")
-        return False
+# def test_connection():
+#     try:
+#         with engine.connect() as connection:
+#             logger.debug("Database connection successful!")
+#             return True
+#     except Exception as e:
+#         logger.error(f"Failed to connect to the database: {e}")
+#         return False
 
 def save_user_selections(user_id, app_installed_team_id, selections):
 
-    if not test_connection():
-        logger.error("Aborting: Unable to connect to the database.")
-        return
+    # if not test_connection():
+    #     logger.error("Aborting: Unable to connect to the database.")
+    #     return
     
     try:
-        query = text("""
-            INSERT INTO user_builder_selections (user_id, builder_options, last_updated, app_installed_team_id)
-            VALUES (:user_id, :builder_options, :last_updated, :app_installed_team_id)
-            ON CONFLICT (user_id, app_installed_team_id) 
-            DO UPDATE SET 
-                builder_options = EXCLUDED.builder_options,
-                last_updated = EXCLUDED.last_updated
-        """)
-        #logger.debug(f"Executing query for user_id {user_id}: {selections}")
+        # query = text("""
+        #     INSERT INTO user_builder_selections (user_id, builder_options, last_updated, app_installed_team_id)
+        #     VALUES (:user_id, :builder_options, :last_updated, :app_installed_team_id)
+        #     ON CONFLICT (user_id, app_installed_team_id) 
+        #     DO UPDATE SET 
+        #         builder_options = EXCLUDED.builder_options,
+        #         last_updated = EXCLUDED.last_updated
+        # """)
+        # #logger.debug(f"Executing query for user_id {user_id}: {selections}")
         
-        with engine.connect() as conn:
-            conn.execute(query, {
+        # with engine.connect() as conn:
+        #     conn.execute(query, {
+        #         "user_id": user_id,
+        #         "builder_options": json.dumps(selections),  # Convert selections to JSON string
+        #         "last_updated": datetime.now(timezone.utc),  # Use timezone-aware datetime
+        #         "app_installed_team_id": app_installed_team_id
+        #     })
+        #     conn.commit()
+        
+        db.insert(
+            "user_builder_selections", 
+            {
                 "user_id": user_id,
                 "builder_options": json.dumps(selections),  # Convert selections to JSON string
                 "last_updated": datetime.now(timezone.utc),  # Use timezone-aware datetime
                 "app_installed_team_id": app_installed_team_id
-            })
-            conn.commit()
+            }
+        )
         logger.debug(f"Successfully saved selections for user_id {user_id}")
     except Exception as e:
         logger.error(f"Error saving builder mode selections and mode: {e}")
@@ -501,19 +527,19 @@ def save_user_selections(user_id, app_installed_team_id, selections):
 # Retrieve "builder mode" users selections
 def get_user_selections(user_id, app_installed_team_id):
     try:
-        query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
-        with engine.connect() as conn:
-            result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
-            logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {result}")
-            if result and result[0]:
-                return result[0]
-            return None
+        # query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
+        # with engine.connect() as conn:
+        #     result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
+        result = db.fetch_one("SELECT builder_options FROM user_builder_options WHERE user_id = %s AND app_installed_team_id = %s", (user_id, app_installed_team_id))
+        logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {result}")
+        if result and result[0]:
+            return result[0]
+        return None
     except Exception as e:
         logger.error(f"Error getting user selections: {e}")
         return None
 
 
-#### JEREMY'S CODE ####
 
 # @app.action("open_channel_creator")
 # def handle_open_channel_creator(ack, body, client):
@@ -580,439 +606,455 @@ def get_user_selections(user_id, app_installed_team_id):
 #     except Exception as e:
 #         logger.error(f"Error opening channel creator modal: {e}")
 
-# @app.view("channel_creator_submission")
-# def handle_channel_creator_submission(ack, body, client, view, logger):
-#     ack()
-#     # Move the channel generation logic from handle_generate_channels here
-#     user_id = body["user"]["id"]
-#     try:
-#         state_values = view["state"]["values"]
+@app.view("channel_creator_submission")
+def handle_channel_creator_submission(ack, body, client, view, logger):
+    ack()
+    # Move the channel generation logic from handle_generate_channels here
+    user_id = body["user"]["id"]
+    try:
+        state_values = view["state"]["values"]
         
-#         # Initialize user dict if it doesn't exist
-#         if user_id not in user_inputs:
-#             user_inputs[user_id] = {}
+        # Initialize user dict if it doesn't exist
+        if user_id not in user_inputs:
+            user_inputs[user_id] = {}
         
-#         # Get use case description (required)
-#         use_case = state_values.get("use_case_input", {}).get("use_case", {}).get("value")
-#         if not use_case:
-#             user_inputs[user_id]["use_case"] = ""
-#             raise ValueError("Use Case Description is required")
+        # Get use case description (required)
+        use_case = state_values.get("use_case_input", {}).get("use_case", {}).get("value")
+        if not use_case:
+            user_inputs[user_id]["use_case"] = ""
+            raise ValueError("Use Case Description is required")
         
-#         user_inputs[user_id]["use_case"] = use_case
+        user_inputs[user_id]["use_case"] = use_case
         
-#         # Get customer name (optional)
-#         customer_name = state_values.get("customer_name_input", {}).get("customer_name", {}).get("value")
-#         user_inputs[user_id]["customer_name"] = customer_name
+        # Get customer name (optional)
+        customer_name = state_values.get("customer_name_input", {}).get("customer_name", {}).get("value")
+        user_inputs[user_id]["customer_name"] = customer_name
         
-#         # Rest of your existing channel generation logic from handle_generate_channels...
-#         # Show loading modal
-#         view_modal = client.views_open(
-#             trigger_id=body["trigger_id"],
-#             view={
-#                 "type": "modal",
-#                 "title": {
-#                     "type": "plain_text",
-#                     "text": "Creating Channels"
-#                 },
-#                 "blocks": [
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": "🔄 Generating channels based on your input...\nThis may take a few moments."
-#                         }
-#                     }
-#                 ]
-#             }
-#         )
+        # Rest of your existing channel generation logic from handle_generate_channels...
+        # Show loading modal
+        view_modal = client.views_open(
+            trigger_id=body["trigger_id"],
+            view={
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Creating Channels"
+                },
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "🔄 Generating channels based on your input...\nThis may take a few moments."
+                        }
+                    }
+                ]
+            }
+        )
 
-#         try:
+        try:
 
-#             channels_list = factory._fetch_channels(customer_name, use_case)
-#             created_channels = logistics._send_channels(client, user_id, channels_list)
+            channels_list = factory._fetch_channels(customer_name, use_case)
+            created_channels = logistics._send_channels(client, user_id, channels_list)
                     
-#             client.chat_postMessage(
-#                 channel=user_id,
-#                 text=f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
-#             )
-#             # Close loading modal
-#             client.views_update(
-#                 view_id=view_modal["view"]["id"],
-#                 view={"type": "modal", "title": {"type": "plain_text", "text": "Creating Channels"}, "blocks": [
-#                         {
-#                             "type": "section",
-#                             "text": {
-#                                 "type": "mrkdwn",
-#                                 "text": f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
-#                             }
-#                         }
-#                     ]}
-#             )
-#         except Exception as e:
-#             logger.error(f"Error in channel creation: {e}")
+            # client.chat_postMessage(
+            #     channel=user_id,
+            #     text=f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
+            # )
+            logistics.send_message(
+                client=client,
+                selected_channel=user_id,
+                post={"message":f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])}
+            )
+            # Close loading modal
+            client.views_update(
+                view_id=view_modal["view"]["id"],
+                view={"type": "modal", "title": {"type": "plain_text", "text": "Creating Channels"}, "blocks": [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
+                            }
+                        }
+                    ]}
+            )
+        except Exception as e:
+            logger.error(f"Error in channel creation: {e}")
 
-#     except Exception as e:
-#         logger.error(f"Error in channel creator submission: {e}")
-#         client.chat_postMessage(
-#             channel=user_id,
-#             text=f"❌ Error creating channels: {str(e)}"
-#         )
-#         client.views_update(
-#             view_id=view_modal["view"]["id"],
-#             view={"type": "modal", "title": {"type": "plain_text", "text": "Creating Channels"}, "blocks": [
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"❌ Error creating channels: {str(e)}"
-#                         }
-#                     }
-#                 ]}
-#         )
+    except Exception as e:
+        logger.error(f"Error in channel creator submission: {e}")
+        # client.chat_postMessage(
+        #     channel=user_id,
+        #     text=f"❌ Error creating channels: {str(e)}"
+        # )
+        logistics.send_message(
+            client=client,
+            selected_channel=user_id,
+            post={"message": f"❌ Error creating channels: {str(e)}"}
+        )
+        client.views_update(
+            view_id=view_modal["view"]["id"],
+            view={"type": "modal", "title": {"type": "plain_text", "text": "Creating Channels"}, "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"❌ Error creating channels: {str(e)}"
+                        }
+                    }
+                ]}
+        )
 
-# @app.action("generate_canvas")
-# def handle_generate_canvas(ack, body, client, logger):
-#     ack()
-#     try:
-#         selected_channel = body["actions"][0]["value"]
-#         logger.info(f"Generating canvas for channel: {selected_channel}")
+@app.action("generate_canvas")
+def handle_generate_canvas(ack, body, client, logger):
+    ack()
+    try:
+        selected_channel = body["actions"][0]["value"]
+        logger.info(f"Generating canvas for channel: {selected_channel}")
 
-#         # Update the modal to show generation in progress
-#         client.views_update(
-#             view_id=body["container"]["view_id"],
-#             view={
-#                 "type": "modal",
-#                 "title": {
-#                     "type": "plain_text",
-#                     "text": "Generating Canvas"
-#                 },
-#                 "blocks": [
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"🎨 Generating canvas for <#{selected_channel}>...\nThis may take a few moments."
-#                         }
-#                     }
-#                 ]
-#             }
-#         )
+        # Update the modal to show generation in progress
+        client.views_update(
+            view_id=body["container"]["view_id"],
+            view={
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Generating Canvas"
+                },
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"🎨 Generating canvas for <#{selected_channel}>...\nThis may take a few moments."
+                        }
+                    }
+                ]
+            }
+        )
 
-#         # Get channel info
-#         try:
-#             channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
-#             channel_details = channel_info["channel"]
+        # Get channel info
+        try:
+            channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
+            channel_details = channel_info["channel"]
             
-#             # Extract relevant channel details
-#             channel_name = channel_details["name"]
-#             channel_topic = channel_details.get("topic", {}).get("value", "")
-#             channel_purpose = channel_details.get("purpose", {}).get("value", "")
-#             is_private = channel_details["is_private"]
-#             member_count = channel_details["num_members"]
-#             created_ts = channel_details["created"]
+            # Extract relevant channel details
+            channel_name = channel_details["name"]
+            channel_topic = channel_details.get("topic", {}).get("value", "")
+            channel_purpose = channel_details.get("purpose", {}).get("value", "")
+            is_private = channel_details["is_private"]
+            member_count = channel_details["num_members"]
+            created_ts = channel_details["created"]
 
-#             if channel_details.get("properties", {}).get("canvas", False):
-#                 logger.info(f"Channel {channel_name} already has a canvas")
-#                 do_canvas_update = True
-#             else:
-#                 do_canvas_update = False
+            if channel_details.get("properties", {}).get("canvas", False):
+                logger.info(f"Channel {channel_name} already has a canvas")
+                do_canvas_update = True
+            else:
+                do_canvas_update = False
             
-#             logger.info(f"Retrieved info for channel {channel_name}")
-#             logger.debug(f"Topic: {channel_topic}")
-#             logger.debug(f"Purpose: {channel_purpose}") 
-#             logger.debug(f"Is private: {is_private}")
-#             logger.debug(f"Member count: {member_count}")
-#             logger.debug(f"Created timestamp: {created_ts}")         
+            logger.info(f"Retrieved info for channel {channel_name}")
+            logger.debug(f"Topic: {channel_topic}")
+            logger.debug(f"Purpose: {channel_purpose}") 
+            logger.debug(f"Is private: {is_private}")
+            logger.debug(f"Member count: {member_count}")
+            logger.debug(f"Created timestamp: {created_ts}")         
 
-#             # Get member list for the channel
-#             members_response = client.conversations_members(channel=selected_channel)
-#             member_ids = members_response["members"]
+            # Get member list for the channel
+            members_response = client.conversations_members(channel=selected_channel)
+            member_ids = members_response["members"]
 
-#             # Check if bot is member of channel and join if not
-#             try:
-#                 # Get bot's own user ID
-#                 bot_info = client.auth_test()
-#                 bot_user_id = bot_info["user_id"]
+            # Check if bot is member of channel and join if not
+            try:
+                # Get bot's own user ID
+                bot_info = client.auth_test()
+                bot_user_id = bot_info["user_id"]
                 
-#                 # Check if bot is in members list
-#                 if bot_user_id not in member_ids:
-#                     logger.info(f"Bot not in channel {channel_name}, joining now...")
-#                     client.conversations_join(channel=selected_channel)
-#                     logger.info(f"Successfully joined channel {channel_name}")
-#             except Exception as e:
-#                 logger.error(f"Error checking/joining channel {channel_name}: {e}")
-#                 raise
+                # Check if bot is in members list
+                if bot_user_id not in member_ids:
+                    logger.info(f"Bot not in channel {channel_name}, joining now...")
+                    client.conversations_join(channel=selected_channel)
+                    logger.info(f"Successfully joined channel {channel_name}")
+            except Exception as e:
+                logger.error(f"Error checking/joining channel {channel_name}: {e}")
+                raise
             
-#             # Get 5 random members (or fewer if channel has less than 5 members)
-#             sample_size = min(5, len(member_ids))
-#             random_members = random.sample(member_ids, sample_size)
+            # Get 5 random members (or fewer if channel has less than 5 members)
+            sample_size = min(5, len(member_ids))
+            random_members = random.sample(member_ids, sample_size)
             
-#             logger.debug(f"Selected random members: {random_members}")
+            logger.debug(f"Selected random members: {random_members}")
 
-#             content = factory._fetch_canvas(
-#                 channel_name=channel_name,
-#                 channel_purpose=channel_purpose,
-#                 channel_topic=channel_topic,
-#                 member_list=random_members
-#             )
+            content = factory._fetch_canvas(
+                channel_name=channel_name,
+                channel_purpose=channel_purpose,
+                channel_topic=channel_topic,
+                member_list=random_members
+            )
 
-#             logger.info(content)
+            logger.info(content)
 
-#             canvas_id = logistics._send_canvas(client, selected_channel, content, do_canvas_update)
+            canvas_id = logistics._send_canvas(client, selected_channel, content, do_canvas_update)
             
-#             # Get canvas file info
-#             canvas_info = client.files_info(file=canvas_id)
-#             logger.info(f"Canvas file info: {canvas_info['file']}")
+            # Get canvas file info
+            canvas_info = client.files_info(file=canvas_id)
+            logger.info(f"Canvas file info: {canvas_info['file']}")
             
-#             # Extract permalink
-#             canvas_permalink = canvas_info["file"]["permalink"]
-#             logger.info(f"Canvas permalink: {canvas_permalink}")
-#             # Send DM to user about canvas creation/update
-#             client.chat_postMessage(
-#                 channel=body["user"]["id"],
-#                 text=f"{'Updated' if do_canvas_update else 'Created'} canvas for <#{selected_channel}>\n" +
-#                      f"View it here: <{canvas_permalink}|{content['title']}>"
-#             )
+            # Extract permalink
+            canvas_permalink = canvas_info["file"]["permalink"]
+            logger.info(f"Canvas permalink: {canvas_permalink}")
+            # Send DM to user about canvas creation/update
+            # client.chat_postMessage(
+            #     channel=body["user"]["id"],
+            #     text=f"{'Updated' if do_canvas_update else 'Created'} canvas for <#{selected_channel}>\n" +
+            #          f"View it here: <{canvas_permalink}|{content['title']}>"
+            # )
+            logistics.send_message(
+                client=client,
+                selected_channel=body["user"]["id"],
+                post={"message":f"{'Updated' if do_canvas_update else 'Created'} canvas for <#{selected_channel}>\n" +
+                     f"View it here: <{canvas_permalink}|{content['title']}>"}
+            )
 
-#             # # After successful canvas generation, refresh the channel details modal
-#             # channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
-#             # channel = channel_info["channel"]
-#             # history = client.conversations_history(channel=selected_channel, limit=1)
+            # # After successful canvas generation, refresh the channel details modal
+            # channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
+            # channel = channel_info["channel"]
+            # history = client.conversations_history(channel=selected_channel, limit=1)
             
-#             # Reopen the channel details modal with updated info
-#             handle_channel_selection(ack, {
-#                 "trigger_id": body["trigger_id"],
-#                 "actions": [{"selected_conversation": selected_channel}],
-#                 "user": {"id": body["user"]["id"]},
-#                 "container": {"view_id": body["container"]["view_id"]}
-#             }, client, logger, returner=True)
+            # Reopen the channel details modal with updated info
+            handle_channel_selection(ack, {
+                "trigger_id": body["trigger_id"],
+                "actions": [{"selected_conversation": selected_channel}],
+                "user": {"id": body["user"]["id"]},
+                "container": {"view_id": body["container"]["view_id"]}
+            }, client, logger, returner=True)
 
-#         except SlackApiError as e:
-#             logger.error(f"Error getting channel info: {e}")
-#             raise
-#         except Exception as e:
-#             logger.error(f"Error in canvas generation/update: {e}")
-#             error_view = {
-#                 "type": "home",
-#                 "blocks": [
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"❌ Error: Unable to generate/update canvas.\nDetails: {str(e)}"
-#                         }
-#                     }
-#                 ]
-#             }
-#             client.views_publish(
-#                 user_id=body["user"]["id"],
-#                 view=error_view
-#             )
+        except SlackApiError as e:
+            logger.error(f"Error getting channel info: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error in canvas generation/update: {e}")
+            error_view = {
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"❌ Error: Unable to generate/update canvas.\nDetails: {str(e)}"
+                        }
+                    }
+                ]
+            }
+            client.views_publish(
+                user_id=body["user"]["id"],
+                view=error_view
+            )
         
-#         update_home_tab(client, {"user": body["user"]["id"]}, logger)
+        update_home_tab(client, {"user": body["user"]["id"]}, logger)
 
-#     except Exception as e:
-#         logger.error(f"Error generating canvas: {e}")
-#         # Show error in the modal instead of home view
-#         client.views_update(
-#             view_id=body["container"]["view_id"],
-#             view={
-#                 "type": "modal",
-#                 "title": {
-#                     "type": "plain_text",
-#                     "text": "Error"
-#                 },
-#                 "blocks": [
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"❌ Error: Unable to generate canvas.\nDetails: {str(e)}"
-#                         }
-#                     }
-#                 ]
-#             }
-#         )
+    except Exception as e:
+        logger.error(f"Error generating canvas: {e}")
+        # Show error in the modal instead of home view
+        client.views_update(
+            view_id=body["container"]["view_id"],
+            view={
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Error"
+                },
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"❌ Error: Unable to generate canvas.\nDetails: {str(e)}"
+                        }
+                    }
+                ]
+            }
+        )
 
 # @app.action("selected_channel")
-# def handle_channel_selection(ack, body, client, logger, returner=False):
-#     if not returner:
-#         ack()
-#     try:
-#         # Get selected channel ID
-#         selected_channel = body["actions"][0]["selected_conversation"]
+def handle_channel_selection(ack, body, client, logger, returner=False):
+    if not returner:
+        ack()
+    try:
+        # Get selected channel ID
+        selected_channel = body["actions"][0]["selected_conversation"]
 
-#         # Get bot's own user ID and check membership
-#         bot_info = client.auth_test()
-#         bot_user_id = bot_info["user_id"]
+        # Get bot's own user ID and check membership
+        bot_info = client.auth_test()
+        bot_user_id = bot_info["user_id"]
         
-#         # Get channel members
-#         try:
-#             channel_info = client.conversations_info(channel=selected_channel)
-#             members = client.conversations_members(channel=selected_channel)["members"]
-#             # If bot is not a member
-#             if bot_user_id not in members:
-#                 # Check if channel is private
-#                 client.conversations_join(channel=selected_channel)
-#         except SlackApiError as e:
-#             logger.error(f"Error checking channel membership: {e}")
-#             client.views_open(
-#                 trigger_id=body["trigger_id"],
-#                 view={
-#                     "type": "modal",
-#                     "title": {
-#                         "type": "plain_text",
-#                         "text": "Access Error"
-#                     },
-#                     "blocks": [
-#                         {
-#                             "type": "section",
-#                             "text": {
-#                                 "type": "mrkdwn",
-#                                 "text": "❌ Unable to access this private channel. Please add the bot to the channel first."
-#                             }
-#                         }
-#                     ]
-#                 }
-#             )
-#             return
-#         except Exception as e:
-#             logger.error(f"Error checking channel membership: {e}")
-#             raise
+        # Get channel members
+        try:
+            channel_info = client.conversations_info(channel=selected_channel)
+            members = client.conversations_members(channel=selected_channel)["members"]
+            # If bot is not a member
+            if bot_user_id not in members:
+                # Check if channel is private
+                client.conversations_join(channel=selected_channel)
+        except SlackApiError as e:
+            logger.error(f"Error checking channel membership: {e}")
+            client.views_open(
+                trigger_id=body["trigger_id"],
+                view={
+                    "type": "modal",
+                    "title": {
+                        "type": "plain_text",
+                        "text": "Access Error"
+                    },
+                    "blocks": [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "❌ Unable to access this private channel. Please add the bot to the channel first."
+                            }
+                        }
+                    ]
+                }
+            )
+            return
+        except Exception as e:
+            logger.error(f"Error checking channel membership: {e}")
+            raise
         
-#         # Get channel info
-#         channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
-#         channel = channel_info["channel"]
+        # Get channel info
+        channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
+        channel = channel_info["channel"]
         
-#         # Get last message
-#         history = client.conversations_history(channel=selected_channel, limit=1)
-#         last_message = history["messages"][0]["ts"] if history["messages"] else "No messages"
+        # Get last message
+        history = client.conversations_history(channel=selected_channel, limit=1)
+        last_message = history["messages"][0]["ts"] if history["messages"] else "No messages"
         
-#         # Format timestamps
-#         from datetime import datetime
-#         created_date = datetime.fromtimestamp(channel["created"]).strftime("%Y-%m-%d %H:%M:%S")
-#         last_message_date = datetime.fromtimestamp(float(last_message)).strftime("%Y-%m-%d %H:%M:%S") if last_message != "No messages" else "Never"
+        # Format timestamps
+        from datetime import datetime
+        created_date = datetime.fromtimestamp(channel["created"]).strftime("%Y-%m-%d %H:%M:%S")
+        last_message_date = datetime.fromtimestamp(float(last_message)).strftime("%Y-%m-%d %H:%M:%S") if last_message != "No messages" else "Never"
         
         
-#         view_data={
-#                 "type": "modal",
-#                 "title": {
-#                     "type": "plain_text",
-#                     "text": f"Channel Details"
-#                 },
-#                 "close": {
-#                     "type": "plain_text",
-#                     "text": "Close"
-#                 },
-#                 "blocks": [
-#                     {
-#                         "type": "header",
-#                         "text": {
-#                             "type": "plain_text",
-#                             "text": f"#{channel['name']}"
-#                         }
-#                     },
-#                     {
-#                         "type": "section",
-#                         "fields": [
-#                             {
-#                                 "type": "mrkdwn",
-#                                 "text": f"*Type:*\n{'Private' if channel['is_private'] else 'Public'} Channel"
-#                             },
-#                             {
-#                                 "type": "mrkdwn",
-#                                 "text": f"*Members:*\n{channel['num_members']} members"
-#                             }
-#                         ]
-#                     },
-#                     {
-#                         "type": "section",
-#                         "fields": [
-#                             {
-#                                 "type": "mrkdwn",
-#                                 "text": f"*Created:*\n{created_date}"
-#                             },
-#                             {
-#                                 "type": "mrkdwn",
-#                                 "text": f"*Last Message:*\n{last_message_date}"
-#                             }
-#                         ]
-#                     },
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"*Purpose:*\n{channel.get('purpose', {}).get('value', 'No purpose set')}"
-#                         }
-#                     },
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"*Topic:*\n{channel.get('topic', {}).get('value', 'No topic set')}"
-#                         }
-#                     },
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"*Channel Canvas Status:*\n{'✅ Has Canvas' if channel.get('properties', {}).get('canvas', False) else '❌ No Canvas'}"
-#                         }
-#                     },
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"*Last Message:*\n{history['messages'][0]['text'] if history['messages'] else 'No messages yet'}"
-#                         }
-#                     },
-#                     {
-#                         "type": "actions",
-#                         "elements": [
-#                             {
-#                                 "type": "button",
-#                                 "text": {
-#                                     "type": "plain_text",
-#                                     "text": "Generate Canvas",
-#                                     "emoji": True
-#                                 },
-#                                 "action_id": "generate_canvas",
-#                                 "value": selected_channel
-#                             },
-#                             {
-#                                 "type": "button",
-#                                 "text": {
-#                                     "type": "plain_text",
-#                                     "text": "Generate Conversation",
-#                                     "emoji": True
-#                                 },
-#                                 "action_id": "generate_conversation",
-#                                 "value": selected_channel
-#                             }
-#                         ]
-#                     }
-#                 ]
-#             }
+        view_data={
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": f"Channel Details"
+                },
+                "close": {
+                    "type": "plain_text",
+                    "text": "Close"
+                },
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": f"#{channel['name']}"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "fields": [
+                            {
+                                "type": "mrkdwn",
+                                "text": f"*Type:*\n{'Private' if channel['is_private'] else 'Public'} Channel"
+                            },
+                            {
+                                "type": "mrkdwn",
+                                "text": f"*Members:*\n{channel['num_members']} members"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "section",
+                        "fields": [
+                            {
+                                "type": "mrkdwn",
+                                "text": f"*Created:*\n{created_date}"
+                            },
+                            {
+                                "type": "mrkdwn",
+                                "text": f"*Last Message:*\n{last_message_date}"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*Purpose:*\n{channel.get('purpose', {}).get('value', 'No purpose set')}"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*Topic:*\n{channel.get('topic', {}).get('value', 'No topic set')}"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*Channel Canvas Status:*\n{'✅ Has Canvas' if channel.get('properties', {}).get('canvas', False) else '❌ No Canvas'}"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*Last Message:*\n{history['messages'][0]['text'] if history['messages'] else 'No messages yet'}"
+                        }
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Generate Canvas",
+                                    "emoji": True
+                                },
+                                "action_id": "generate_canvas",
+                                "value": selected_channel
+                            },
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Generate Conversation",
+                                    "emoji": True
+                                },
+                                "action_id": "generate_conversation",
+                                "value": selected_channel
+                            }
+                        ]
+                    }
+                ]
+            }
         
-#         if not returner:
-#             # Open modal with channel details
-#             client.views_open(
-#                 trigger_id=body["trigger_id"],
-#                 view=view_data
-#             )
-#         else:
-#             client.views_update(
-#                 view_id=body["container"]["view_id"],
-#                 view=view_data
-#             )
-#     except Exception as e:
-#         logger.error(f"Error handling channel selection: {e}")
-#         # Send error message as ephemeral message
-#         client.chat_postEphemeral(
-#             channel=body["container"]["channel_id"],
-#             user=body["user"]["id"],
-#             text=f"❌ Error: Unable to load channel details.\nDetails: {str(e)}"
-#         )
+        if not returner:
+            # Open modal with channel details
+            client.views_open(
+                trigger_id=body["trigger_id"],
+                view=view_data
+            )
+        else:
+            client.views_update(
+                view_id=body["container"]["view_id"],
+                view=view_data
+            )
+    except Exception as e:
+        logger.error(f"Error handling channel selection: {e}")
+        # Send error message as ephemeral message
+        client.chat_postEphemeral(
+            channel=body["container"]["channel_id"],
+            user=body["user"]["id"],
+            text=f"❌ Error: Unable to load channel details.\nDetails: {str(e)}"
+        )
 
 # @app.action("generate_conversation")
 # def handle_generate_conversation(ack, body, client, logger):
@@ -1300,471 +1342,414 @@ def get_user_selections(user_id, app_installed_team_id):
 #             text=f"❌ Error: Unable to generate conversation.\nDetails: {str(e)}"
 #         )
 
-# @app.view("conversation_generator_modal")
-# def handle_conversation_generator_submission(ack, body, client, view, logger):
-#     ack()
-#     # Initialize original_view_info outside try block
-#     original_view_info = None
-#     try:
-#         # Extract all form values
-#         state_values = view["state"]["values"]
+@app.view("conversation_generator_modal")
+def handle_conversation_generator_submission(ack, body, client, view, logger):
+    ack()
+    
+    current_user = worker.get_user(client, body["user"]["id"])
+
+    # Initialize original_view_info outside try block
+    original_view_info = None
+    try:
+        # Extract all form values
+        state_values = view["state"]["values"]
         
-#         # Get all input values
-#         company_name = state_values["company_name"]["company_name_input"]["value"]
-#         industry = state_values["industry"]["industry_select"]["selected_option"]["value"]
-#         topics = [option["value"] for option in state_values["topics"]["topics_select"].get("selected_options", [])]
-#         custom_prompt = state_values["custom_prompt"]["custom_prompt_input"].get("value", "")
-#         num_participants = state_values["num_participants"]["participants_select"]["selected_option"]["value"]
-#         num_posts = state_values["num_posts"]["posts_select"]["selected_option"]["value"]
-#         post_length = state_values["post_length"]["length_select"]["selected_option"]["value"]
-#         tone = state_values["tone"]["tone_select"]["selected_option"]["value"]
-#         emoji_density = state_values["emoji_density"]["emoji_select"]["selected_option"]["value"]
-#         thread_replies = state_values["thread_replies"]["replies_select"]["selected_option"]["value"]
-#         # Get selected channel from private metadata
-#         selected_channel = view["private_metadata"]
-#         logger.debug(f"Selected channel for conversation generation: {selected_channel}")
+        # Get all input values
+        company_name = state_values["company_name"]["company_name_input"]["value"]
+        industry = state_values["industry"]["industry_select"]["selected_option"]["value"]
+        topics = [option["value"] for option in state_values["topics"]["topics_select"].get("selected_options", [])]
+        custom_prompt = state_values["custom_prompt"]["custom_prompt_input"].get("value", "")
+        num_participants = state_values["num_participants"]["participants_select"]["selected_option"]["value"]
+        num_posts = state_values["num_posts"]["posts_select"]["selected_option"]["value"]
+        post_length = state_values["post_length"]["length_select"]["selected_option"]["value"]
+        tone = state_values["tone"]["tone_select"]["selected_option"]["value"]
+        emoji_density = state_values["emoji_density"]["emoji_select"]["selected_option"]["value"]
+        thread_replies = state_values["thread_replies"]["replies_select"]["selected_option"]["value"]
+        # Get selected channel from private metadata
+        selected_channel = view["private_metadata"]
+        logger.debug(f"Selected channel for conversation generation: {selected_channel}")
 
-#         # Build data dictionary from form values
-#         data = {
-#             "company_name": company_name,
-#             "industry": industry,
-#             "topics": topics,
-#             "custom_prompt": custom_prompt,
-#             "num_participants": num_participants,
-#             "num_posts": num_posts,
-#             "post_length": post_length,
-#             "tone": tone,
-#             "emoji_density": emoji_density,
-#             "thread_replies": thread_replies
-#         }
+        # Prep the message history log
+        history_entry = {
+            "conversation_id": None,
+            "channel_id": selected_channel,
+            "user_id": current_user["id"]
+        }
+        history_row = db.insert("history", history_entry)
+        start_time = worker.get_time()
 
-#         view_body = _get_conversation_progress_view(data=data, total=10, current=0)
+        # Build data dictionary from form values
+        data = {
+            "company_name": company_name,
+            "industry": industry,
+            "topics": topics,
+            "custom_prompt": custom_prompt,
+            "num_participants": num_participants,
+            "num_posts": num_posts,
+            "post_length": post_length,
+            "tone": tone,
+            "emoji_density": emoji_density,
+            "thread_replies": thread_replies
+        }
 
-#         # Show loading state
-#         original_view_info = client.views_open(
-#             trigger_id=body["trigger_id"],
-#             view=view_body
-#         )
+        view_body = _get_conversation_progress_view(data=data, total=10, current=0)
 
-#         # Get channel info
-#         try:
-#             channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
-#             channel_details = channel_info["channel"]
+        # Show loading state
+        original_view_info = client.views_open(
+            trigger_id=body["trigger_id"],
+            view=view_body
+        )
+
+        # Get channel info
+        try:
+            channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
+            channel_details = channel_info["channel"]
             
-#             # Extract relevant channel details
-#             channel_name = channel_details["name"]
-#             channel_topic = channel_details.get("topic", {}).get("value", "")
-#             channel_purpose = channel_details.get("purpose", {}).get("value", "")
-#             is_private = channel_details["is_private"]
-#             member_count = channel_details["num_members"]
-#             created_ts = channel_details["created"]
+            # Extract relevant channel details
+            channel_name = channel_details["name"]
+            channel_topic = channel_details.get("topic", {}).get("value", "")
+            channel_purpose = channel_details.get("purpose", {}).get("value", "")
+            is_private = channel_details["is_private"]
+            member_count = channel_details["num_members"]
+            created_ts = channel_details["created"]
             
-#             logger.info(f"Retrieved info for channel {channel_name}")
-#             logger.debug(f"Topic: {channel_topic}")
-#             logger.debug(f"Purpose: {channel_purpose}")
-#             logger.debug(f"Is private: {is_private}")
-#             logger.debug(f"Member count: {member_count}")
-#             logger.debug(f"Created timestamp: {created_ts}")
+            logger.info(f"Retrieved info for channel {channel_name}")
+            logger.debug(f"Topic: {channel_topic}")
+            logger.debug(f"Purpose: {channel_purpose}")
+            logger.debug(f"Is private: {is_private}")
+            logger.debug(f"Member count: {member_count}")
+            logger.debug(f"Created timestamp: {created_ts}")
 
-#         except Exception as e:
-#             logger.error(f"Error getting channel info: {e}")
-#             raise
+        except Exception as e:
+            logger.error(f"Error getting channel info: {e}")
+            raise
 
-#         # TODO: Add your conversation generation logic here
-#         # This is where you would call your AI service or other generation method
-#         # Get member list for the channel
-#         members_response = client.conversations_members(channel=selected_channel)
-#         member_ids = members_response["members"]
+        # TODO: Add your conversation generation logic here
+        # This is where you would call your AI service or other generation method
+        # Get member list for the channel
+        members_response = client.conversations_members(channel=selected_channel)
+        member_ids = members_response["members"]
 
-#         # Get info for each member to filter out bots
-#         human_members = []
-#         for member_id in member_ids:
-#             try:
-#                 member_info = client.users_info(user=member_id)
-#                 if not member_info["user"]["is_bot"]:
-#                     human_members.append(member_id)
-#             except Exception as e:
-#                 logger.error(f"Error getting info for member {member_id}: {e}")
-#                 continue
+        # Get info for each member to filter out bots
+        human_members = []
+        for member_id in member_ids:
+            try:
+                member_info = client.users_info(user=member_id)
+                if not member_info["user"]["is_bot"]:
+                    human_members.append(member_id)
+            except Exception as e:
+                logger.error(f"Error getting info for member {member_id}: {e}")
+                continue
 
-#         # Extract max number from range (e.g., "2-3" becomes 3)
-#         max_participants = int(num_participants.split('-')[1])
+        # Extract max number from range (e.g., "2-3" becomes 3)
+        max_participants = int(num_participants.split('-')[1])
         
-#         if len(human_members) < max_participants:
-#             logger.warning(f"Channel only has {len(human_members)} human members, using all of them")
-#             conversation_participants = human_members
-#         else:
-#             conversation_participants = random.sample(human_members, max_participants)
+        if len(human_members) < max_participants:
+            logger.warning(f"Channel only has {len(human_members)} human members, using all of them")
+            conversation_participants = human_members
+        else:
+            conversation_participants = random.sample(human_members, max_participants)
 
-#         # Get user info for each participant
-#         participant_info = []
-#         for participant_id in conversation_participants:
-#             try:
-#                 user_info = client.users_info(user=participant_id)
-#                 participant_info.append({
-#                     'id': participant_id,
-#                     'name': user_info['user']['name'],
-#                     'real_name': user_info['user'].get('real_name', ''),
-#                     'display_name': user_info['user']['profile'].get('display_name', ''),
-#                     'title': user_info['user']['profile'].get('title', ''),
-#                     'avatar': user_info['user']['profile'].get('image_192', '')
-#                 })
-#                 logger.debug(f"Got info for participant {participant_id}: {participant_info[-1]}")
-#             except Exception as e:
-#                 logger.error(f"Error getting info for participant {participant_id}: {e}")
-#                 continue
-#         logger.debug(f"Selected {len(conversation_participants)} participants from {len(human_members)} human members")
-#         # Generate conversation posts
+        # Get user info for each participant
+        participant_info = []
+        for participant_id in conversation_participants:
+            try:
+                user_info = client.users_info(user=participant_id)
+                participant_info.append({
+                    'id': participant_id,
+                    'name': user_info['user']['name'],
+                    'real_name': user_info['user'].get('real_name', ''),
+                    'display_name': user_info['user']['profile'].get('display_name', ''),
+                    'title': user_info['user']['profile'].get('title', ''),
+                    'avatar': user_info['user']['profile'].get('image_192', '')
+                })
+                logger.debug(f"Got info for participant {participant_id}: {participant_info[-1]}")
+            except Exception as e:
+                logger.error(f"Error getting info for participant {participant_id}: {e}")
+                continue
+        logger.debug(f"Selected {len(conversation_participants)} participants from {len(human_members)} human members")
+        # Generate conversation posts
 
 
-#         # Create a dictionary with all conversation parameters
-#         conversation_params = {
-#             "company_name": company_name,
-#             "industry": industry,
-#             "topics": topics,
-#             "custom_prompt": custom_prompt,
-#             "num_participants": num_participants,
-#             "num_posts": num_posts,
-#             "post_length": post_length,
-#             "tone": tone,
-#             "emoji_density": emoji_density,
-#             "thread_replies": thread_replies,
-#             "conversation_participants": conversation_participants,
-#             "selected_channel": selected_channel,
-#             "channel_topic": channel_topic,
-#             "channel_purpose": channel_purpose,
-#             "is_private": is_private,
-#             "member_count": member_count,
-#             "created_ts": created_ts
-#         }
+        # Create a dictionary with all conversation parameters
+        conversation_params = {
+            "company_name": company_name,
+            "industry": industry,
+            "topics": topics,
+            "custom_prompt": custom_prompt,
+            "num_participants": num_participants,
+            "num_posts": num_posts,
+            "post_length": post_length,
+            "tone": tone,
+            "emoji_density": emoji_density,
+            "thread_replies": thread_replies,
+            "conversation_participants": conversation_participants,
+            "selected_channel": selected_channel,
+            "channel_topic": channel_topic,
+            "channel_purpose": channel_purpose,
+            "is_private": is_private,
+            "member_count": member_count,
+            "created_ts": created_ts
+        }
 
-#         # Extract min and max from range (e.g., "5-10" becomes min=5, max=10)
-#         min_posts, max_posts = map(int, num_posts.split('-'))
-#         total_posts = random.randint(min_posts, max_posts)
+        # Extract min and max from range (e.g., "5-10" becomes min=5, max=10)
+        min_posts, max_posts = map(int, num_posts.split('-'))
+        total_posts = random.randint(min_posts, max_posts)
         
-#         generated_posts = []
-#         for i in range(total_posts):
-#             logger.debug(f"Generating post {i+1} of {total_posts}")
-#             post = factory._fetch_conversation(conversation_params)
-#             # logger.debug("--------------------------------")
-#             # logger.debug(f"Generated post: {post}")
-#             # logger.debug("--------------------------------")
-#             # post_result_data = logistics._send_conversation(
-#             #     client=client, 
-#             #     selected_channel=selected_channel,
-#             #     post=post,
-#             #     participant_info=participant_info
-#             # )
-#             for post_item in post:
-#                 generated_posts.append(post_item)
+        generated_posts = []
 
-#             view_body = _get_conversation_progress_view(data=conversation_params, total=total_posts, current=i+1)
+        history = {
+            "user_id": current_user["id"],
+            "channel_id": selected_channel,
+            "id": history_row["id"]
+        }
+        for i in range(total_posts):
+            logger.debug(f"Generating post {i+1} of {total_posts}")
+            post = factory._fetch_conversation(conversation_params)
+            
+            for post_item in post:
+                post_item["history"] = history.copy() # TODO: this is throwing a problem. Fix it!
+                generated_posts.append(post_item)
 
-#             # Show loading state
-#             view_info = client.views_update(
-#                 view_id=original_view_info["view"]["id"],
-#                 view=view_body
-#             )
+            view_body = _get_conversation_progress_view(data=conversation_params, total=total_posts, current=i+1)
 
-#         # Post each generated post and its replies to the channel
-#         post_result_data = logistics._send_conversation(
-#             client=client, 
-#             selected_channel=selected_channel,
-#             post=generated_posts,
-#             participant_info=participant_info
-#         )
-#         post_results = post_result_data["post_results"]
-#         reply_results = post_result_data["reply_results"]
+            # Show loading state
+            view_info = client.views_update(
+                view_id=original_view_info["view"]["id"],
+                view=view_body
+            )
+
+        # Post each generated post and its replies to the channel
+        post_result_data = logistics._send_conversation(
+            client=client, 
+            selected_channel=selected_channel,
+            post=generated_posts,
+            participant_info=participant_info
+        )
+        post_results = post_result_data["post_results"]
+        reply_results = post_result_data["reply_results"]
+
+        # update the history for query time
+        query_time = worker.get_time() - start_time
+        logger.info(f"Start time = {start_time}; query time: {query_time}")
+        db.update("history", {"query_time": query_time}, {"id": history_row["id"]})
+
+        # log an entry to the analytics table
+        total_posts_sent = db.fetch_one("SELECT COUNT(*) AS total_posts_sent FROM messages WHERE history_id = %s", (history_row["id"],))["total_posts_sent"]
+        db.insert("analytics", {"user_id": current_user["id"], "messages": total_posts_sent})
         
-#         # TODO: Save conversation definition if selected
+        # TODO: Save conversation definition if selected
 
-#         # Update modal to show success
-#         client.views_update(
-#             view_id=original_view_info["view"]["id"],
-#             view={
-#                 "type": "modal",
-#                 "title": {
-#                     "type": "plain_text",
-#                     "text": "Conversation Generated"
-#                 },
-#                 "blocks": [
-#                     {
-#                         "type": "header",
-#                         "text": {
-#                             "type": "plain_text",
-#                             "text": "✅ Conversation generated successfully!",
-#                             "emoji": True
-#                         }
-#                     },
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": f"Generated conversation in <#{selected_channel}> with:"
-#                         }
-#                     },
-#                     {
-#                         "type": "section", 
-#                         "fields": [
-#                             {"type": "mrkdwn", "text": f"*Posts:* {len(post_results)}"},
-#                             {"type": "mrkdwn", "text": f"*Total Replies:* {len(reply_results)}"},
-#                             {"type": "mrkdwn", "text": f"*Participants:* {num_participants}"},
-#                             {"type": "mrkdwn", "text": f"*Topics:* {', '.join(topics) if topics else 'Not specified'}"}
-#                         ]
-#                     },
-#                     {
-#                         "type": "section",
-#                         "text": {
-#                             "type": "mrkdwn",
-#                             "text": "👉 *View the conversation in the channel to see the results!*"
-#                         }
-#                     }
-#                 ]
-#             }
-#         )
+        # Update modal to show success
+        client.views_update(
+            view_id=original_view_info["view"]["id"],
+            view={
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Conversation Generated"
+                },
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "✅ Conversation generated successfully!",
+                            "emoji": True
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"Generated conversation in <#{selected_channel}> with:"
+                        }
+                    },
+                    {
+                        "type": "section", 
+                        "fields": [
+                            {"type": "mrkdwn", "text": f"*Posts:* {len(post_results)}"},
+                            {"type": "mrkdwn", "text": f"*Total Replies:* {len(reply_results)}"},
+                            {"type": "mrkdwn", "text": f"*Participants:* {num_participants}"},
+                            {"type": "mrkdwn", "text": f"*Topics:* {', '.join(topics) if topics else 'Not specified'}"}
+                        ]
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "👉 *View the conversation in the channel to see the results!*"
+                        }
+                    }
+                ]
+            }
+        )
 
-#     except Exception as e:
-#         logger.error(f"Error in conversation generator submission: {e}")
-#         logger.error(f"View: {view}")
+    except Exception as e:
+        logger.error(f"Error in conversation generator submission: {e}")
+        logger.error(f"View: {view}")
+
+        # delete the history item
+        db.delete("history", {"id": history_row["id"]})
         
-#         # Check if original_view_info exists before trying to update
-#         if original_view_info:
-#             # Update modal to show error
-#             client.views_update(
-#                 view_id=original_view_info["view"]["id"],
-#                 view={
-#                     "type": "modal",
-#                     "title": {
-#                         "type": "plain_text",
-#                         "text": "Error"
-#                     },
-#                     "blocks": [
-#                         {
-#                             "type": "section",
-#                             "text": {
-#                                 "type": "mrkdwn",
-#                                 "text": f"❌ Error generating conversation: {str(e)}"
-#                             }
-#                         }
-#                     ]
-#                 }
-#             )
-#         else:
-#             # If original_view_info doesn't exist, open a new error modal
-#             client.views_open(
-#                 trigger_id=body["trigger_id"],
-#                 view={
-#                     "type": "modal",
-#                     "title": {
-#                         "type": "plain_text",
-#                         "text": "Error"
-#                     },
-#                     "blocks": [
-#                         {
-#                             "type": "section",
-#                             "text": {
-#                                 "type": "mrkdwn",
-#                                 "text": f"❌ Error generating conversation: {str(e)}"
-#                             }
-#                         }
-#                     ]
-#                 }
-#             )
-#         raise
+        # Check if original_view_info exists before trying to update
+        if original_view_info:
+            # Update modal to show error
+            client.views_update(
+                view_id=original_view_info["view"]["id"],
+                view={
+                    "type": "modal",
+                    "title": {
+                        "type": "plain_text",
+                        "text": "Error"
+                    },
+                    "blocks": [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": f"❌ Error generating conversation: {str(e)}"
+                            }
+                        }
+                    ]
+                }
+            )
+        else:
+            # If original_view_info doesn't exist, open a new error modal
+            client.views_open(
+                trigger_id=body["trigger_id"],
+                view={
+                    "type": "modal",
+                    "title": {
+                        "type": "plain_text",
+                        "text": "Error"
+                    },
+                    "blocks": [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": f"❌ Error generating conversation: {str(e)}"
+                            }
+                        }
+                    ]
+                }
+            )
+        raise
 
-# def _get_conversation_progress_view(data, total, current=0):
-#     progress = round(current/total * 100)
-#     view = {
-#             "type": "modal",
-#             "title": {
-#                 "type": "plain_text",
-#                 "text": "Generating Conversation"
-#             },
-#             "blocks": [
-#                 {
-#                     "type": "header",
-#                     "text": {
-#                         "type": "plain_text",
-#                         "text": f"🔄 Generating conversation... {progress}% complete",
-#                         "emoji": True
-#                     }
-#                 },
-#                 {
-#                     "type": "section",
-#                     "text": {
-#                         "type": "mrkdwn",
-#                         "text": "Please wait while we generate your conversation with the following parameters:"
-#                     }
-#                 },
-#                 {
-#                     "type": "section",
-#                     "fields": [
-#                         {"type": "mrkdwn", "text": f"*Company:* {data['company_name'] or 'Not specified'}"},
-#                         {"type": "mrkdwn", "text": f"*Industry:* {data['industry']}"},
-#                         {"type": "mrkdwn", "text": f"*Topics:* {', '.join(data['topics']) if data['topics'] else 'Not specified'}"},
-#                         {"type": "mrkdwn", "text": f"*Participants:* {data['num_participants']}"},
-#                         {"type": "mrkdwn", "text": f"*Posts:* {data['num_posts']}"},
-#                         {"type": "mrkdwn", "text": f"*Length:* {data['post_length']}"},
-#                         {"type": "mrkdwn", "text": f"*Tone:* {data['tone']}"},
-#                         {"type": "mrkdwn", "text": f"*Emoji Density:* {data['emoji_density']}"},
-#                         {"type": "mrkdwn", "text": f"*Thread Replies:* {data['thread_replies']}"}
-#                     ]
-#                 },
-#                 {
-#                     "type": "section",
-#                     "text": {
-#                         "type": "mrkdwn",
-#                         "text": f"*Custom Instructions:*\n{data['custom_prompt'] or 'None provided'}"
-#                     }
-#                 }
-#             ]
-#         }
-#     # logger.debug(f"View: {view}")
-#     return view
+def _get_conversation_progress_view(data, total, current=0):
+    progress = round(current/total * 100)
+    view = {
+            "type": "modal",
+            "title": {
+                "type": "plain_text",
+                "text": "Generating Conversation"
+            },
+            "blocks": [
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": f"🔄 Generating conversation... {progress}% complete",
+                        "emoji": True
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Please wait while we generate your conversation with the following parameters:"
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {"type": "mrkdwn", "text": f"*Company:* {data['company_name'] or 'Not specified'}"},
+                        {"type": "mrkdwn", "text": f"*Industry:* {data['industry']}"},
+                        {"type": "mrkdwn", "text": f"*Topics:* {', '.join(data['topics']) if data['topics'] else 'Not specified'}"},
+                        {"type": "mrkdwn", "text": f"*Participants:* {data['num_participants']}"},
+                        {"type": "mrkdwn", "text": f"*Posts:* {data['num_posts']}"},
+                        {"type": "mrkdwn", "text": f"*Length:* {data['post_length']}"},
+                        {"type": "mrkdwn", "text": f"*Tone:* {data['tone']}"},
+                        {"type": "mrkdwn", "text": f"*Emoji Density:* {data['emoji_density']}"},
+                        {"type": "mrkdwn", "text": f"*Thread Replies:* {data['thread_replies']}"}
+                    ]
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Custom Instructions:*\n{data['custom_prompt'] or 'None provided'}"
+                    }
+                }
+            ]
+        }
+    # logger.debug(f"View: {view}")
+    return view
 
-# # # NOTE: This is a test definition that is a remote workflow step. The step is defined in the App Manager > Workflow Steps, and it's awesome!
-# # @app.function("hello_world")
-# # def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
-# #     ack()
-# #     user_id = inputs["user_id"]
-# #     try:
-# #         output = f"Hello World!"
-# #         complete({"hello_message": output})
-# #     except Exception as e:
-# #         logger.exception(e)
-# #         fail(f"Failed to complete the step: {e}")
+@app.function("converse_thread_extend")
+def handle_step_extend_thread(ack: Ack, client, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
+    ack()
+    
+    logger.debug(f"INPUTS: {inputs}")
 
-# # TODO: build a handler for the message shortcut to add conversation to a thread 
-# @app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
-# def handle_thread_generate_shortcut(ack, shortcut, client):
-#     ack()
-#     logger.info(shortcut)
-
-#     # is this a reply message or a main message - https://api.slack.com/messaging/retrieving#finding_threads 
-#     if "thread_ts" in shortcut:
-#         # if it's a reply, get the parent message ts
-#         main_ts = shortcut["thread_ts"]
-#     else:
-#         main_ts = shortcut["message_ts"]
-
-#     # from the main/parent message, get it and all replies
-#     thread = client.conversations_replies(
-#         channel=shortcut["channel"]["id"],
-#         ts=main_ts,
-#         include_all_metadata=True
-#     )
-
-#     members_response = client.conversations_members(channel=shortcut["channel"]["id"])
-#     member_ids = members_response["members"]
-
-#     # Get info for each member to filter out bots
-#     human_members = []
-#     for member_id in member_ids:
-#         try:
-#             member_info = client.users_info(user=member_id)
-#             if not member_info["user"]["is_bot"]:
-#                 human_members.append(member_id)
-#         except Exception as e:
-#             logger.error(f"Error getting info for member {member_id}: {e}")
-#             continue
-
-#     # limit the thread to 5 members
-#     conversation_participants = random.sample(human_members, max(len(human_members), 5))
-
-#     logger.info(thread)
-#     # iterate on this and build a message from:
-#     # - thread["messages"][i]["text"]
-#     # - thread["messages"][i]["username"]
-#     # @-mentions in additional threaded replies may not work!
-#     thread_messages = []
-#     for message in thread["messages"]:
-#         logger.info(message)
-#         if "subtype" in message and message["subtype"] == "bot_message":
-#             logger.info(f"Bot message detected: {message['text']}")
-#             # this is from a bot, so get the username and display image for use later!
-#             # will need to lookup the user to get their ID in order to support mentions in replies
-#             # lets get the user now!
-#             # user = worker._get_user_by_name(message["username"])
-#             if message.get("metadata", {}).get("event_type") in ["converse_message_posted", "converse_reply_posted"]:
-#                 # we have user info to use!
-#                 author_id = message["metadata"]["event_payload"]["actor_id"]
-#             else:
-#                 author_id = "" 
-
-#             thread_messages.append({
-#                 "text": message["text"],
-#                 "author_type": "bot",
-#                 "user": {
-#                     "id": author_id
-#                 }
-#             })
-#         else:
-#             # this is from a real human, so get their user id for lookup later!
-#             thread_messages.append({
-#                 "text": message["text"],
-#                 "author_type": "user",
-#                 "user": {
-#                     "id": message["user"]
-#                 }
-#                 # "username": message["user_profile"]["display_name"]
-#             })
-#     # ^^ this is the context for the additional replies!
-#     logger.info(thread_messages)
-
-#     # get the channel topic, purpose
-#     channel = client.conversations_info(
-#         channel=shortcut["channel"]["id"]
-#     )
-#     logger.info(channel)
-
-#     # pass messages to the AI as context and get additional replies
-#     new_replies = factory.continue_thread(
-#         description=channel["description"],
-#         topic=channel["topic"],
-#         thread=thread_messages,
-#         members=human_members
-#     )
-
-#     for reply in new_replies:
-#         reply["author"] = ''.join(c for c in reply["author"] if c.isalnum())
-#         logger.info(f"Getting user infor for {reply['author']}")
-#         author_full_info = client.users_info(user=reply["author"])
-#         reply_post = {
-#             "message": reply["message"]
-#         }
-#         author = {
-#             "id": reply["author"],
-#             "real_name": author_full_info["user"].get('real_name', ''),
-#             "avatar": author_full_info["user"]["profile"].get('image_192', '')
-#         }
-#         try:
-#             reply_result = logistics.send_message(
-#                 client=client,
-#                 selected_channel=shortcut["channel"]["id"],
-#                 post=reply_post,
-#                 participant=author,
-#                 thread_ts=main_ts
-#             )
-
-#             if "reacjis" in reply:
-#                 logistics.send_reacjis(
-#                     client=client,
-#                     channel_id=shortcut["channel"]["id"],
-#                     message_ts=reply_result["ts"],
-#                     reacji=reply["reacjis"]
-#                 )
-#         except Exception as e:
-#             logger.error(f"Error sending reply: {e}")
+    try:
+        conversation.extend_thread(client, member_id=inputs["member_id"], channel_id=inputs["message_ts"]["channel_id"], message_ts=inputs["message_ts"]["message_ts"])
+        complete()
+    except Exception as e:
+        logger.error(f"Error extending thread via workflow: {e}")
+        fail(f"Error extending thread via workflow: {e}")
 
 
-#     # iterate and post reply messages
 
-# # TODO: build a handler to add content to a channel. First show a modal if the context of the current channel cannot be determined
-# # TODO: This could (maybe???) also be run at the thread level and execute the same function as the message action flow... if the thread ts is known
-# @app.shortcut({"callback_id": "channel_generate", "type": "shortcut"})
-# def handle_channel_generate_shortcut(ack, shortcut, client):
-#     ack()
-#     logger.info(shortcut)
+
+
+# NOTE: This is a test definition that is a remote workflow step. The step is defined in the App Manager > Workflow Steps, and it's awesome!
+@app.function("hello_world")
+def handle_hello_world_event(ack: Ack, inputs: dict, fail: Fail, complete: Complete, logger: logging.Logger):
+    ack()
+    user_id = inputs["user_id"]
+    try:
+        output = f"Hello World!"
+        complete({"hello_message": output})
+    except Exception as e:
+        logger.exception(e)
+        fail(f"Failed to complete the step: {e}")
+
+# TODO: build a handler for the message shortcut to add conversation to a thread 
+@app.shortcut({"callback_id": "thread_generate", "type": "message_action"})
+def handle_thread_generate_shortcut(ack, shortcut, client):
+    ack()
+
+    # current_user = worker.get_user(client, shortcut["user"]["id"])
+
+    if "thread_ts" in shortcut:
+        # if it's a reply, get the parent message ts
+        main_ts = shortcut["thread_ts"]
+    else:
+        main_ts = shortcut["message_ts"]
+
+    conversation.extend_thread(client, shortcut["user"]["id"], shortcut["channel"]["id"], main_ts)
+
+
+@app.event("app_mention")
+def handle_mention_action(event, client):
+    logger.debug("EVENT APP MENTIONED!")
+    logger.debug(event)
+
+    member_id = event["user"]
+    channel_id = event["channel"]
+    message_ts = event["ts"]
+
+    conversation.extend_thread(client, member_id=member_id, channel_id=channel_id, message_ts=message_ts)  
+
+
+# TODO: build a handler to add content to a channel. First show a modal if the context of the current channel cannot be determined
+# TODO: This could (maybe???) also be run at the thread level and execute the same function as the message action flow... if the thread ts is known
+@app.shortcut({"callback_id": "channel_generate", "type": "shortcut"})
+def handle_channel_generate_shortcut(ack, shortcut, client):
+    ack()
+    logger.info(shortcut)
 
 def main():
     try:

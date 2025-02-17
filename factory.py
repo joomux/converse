@@ -329,6 +329,7 @@ def continue_thread(description: str, topic: str, thread: dict, members: list):
         f"\nLIST OF USERS: {__build_mention_string(members)}"
         "\n\"\"\"\nRULES:"
         "\nEach message should feel authentic and be unique in structure, format and tone."
+        "\nEach reply should be between 1 and 5 sentences in length."
         "\nUse applicable standard Slack emoji."
         "\nMention only users from the list provided"
         "\nFormat messages in simplified markdown. For example, *bold*, _italic_, `inline code`, ```code block```"
@@ -362,7 +363,7 @@ def continue_thread(description: str, topic: str, thread: dict, members: list):
                             "properties": {
                                 "author": {
                                     "type": "string",
-                                    "description": "The name of the authore posting the reply message."
+                                    "description": "The name of the authore posting the reply message. This is alphanumeric only."
                                 },
                                  "message": {
                                     "type": "string",
@@ -376,7 +377,7 @@ def continue_thread(description: str, topic: str, thread: dict, members: list):
                             },
                             "required": ["author", "message"]
                         },
-                        "description": "A structured message message send in reply to the previous message. There should be approximately 5 replies, though this should vary."
+                        "description": "A structured message message send in reply to the previous message. Use a random number between 0 and 10 as the number of replies to generate."
                     }
                 },
                 "required": ["replies"]
