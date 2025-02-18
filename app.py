@@ -56,8 +56,7 @@ def update_home_tab(client, event, logger):
         query = "SELECT mode FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
         result = db.fetch_one(query, (user_id, app_installed_team_id))
 
-        
-        mode = result[0] if result else None
+        mode = result["mode"] if result else None
         logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {mode}")
     
         if mode == "builder":
@@ -530,10 +529,10 @@ def get_user_selections(user_id, app_installed_team_id):
         # query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
         # with engine.connect() as conn:
         #     result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
-        result = db.fetch_one("SELECT builder_options FROM user_builder_options WHERE user_id = %s AND app_installed_team_id = %s", (user_id, app_installed_team_id))
+        result = db.fetch_one("SELECT builder_options FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s", (user_id, app_installed_team_id))
         logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {result}")
-        if result and result[0]:
-            return result[0]
+        if result and result["builder_options"]:
+            return result["builder_options"]
         return None
     except Exception as e:
         logger.error(f"Error getting user selections: {e}")
