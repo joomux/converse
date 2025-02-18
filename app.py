@@ -8,6 +8,7 @@ import random
 import json
 import logging
 import time
+from datetime import datetime, timezone
 import factory
 import logistics
 import worker
@@ -42,162 +43,568 @@ user_inputs = {}  # Dictionary to store user inputs
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
-        logger.debug("CLIENT START")
-        logger.debug(client)
-        logger.debug("CLIENT END")
-        view = {
-            "type": "home",
-            "blocks": [
-                {
+        # Fetch builder options from the database for this user
+        user_id = event["user"]
+        # Fetch team ID
+        app_installed_team_id = event["view"]["app_installed_team_id"]
+
+        # Retrieve the mode from the database
+        # query = text("SELECT mode FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
+        # with engine.connect() as conn:
+        #     result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
+        
+        query = "SELECT mode FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
+        result = db.fetch_one(query, (user_id, app_installed_team_id))
+
+        
+        mode = result[0] if result else None
+        logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {mode}")
+    
+        if mode == "builder":
+            # User is in builder mode, show builder view
+            update_app_home_to_builder_mode(client, user_id, app_installed_team_id)
+
+        else:
+
+            # Retrieve the builder options from the database
+            builder_options = get_user_selections(user_id, app_installed_team_id)  
+
+            # Path to home_tab.json Block Kit template
+            file_path = os.path.join("block_kit", "home_tab.json")
+            
+            # Read the home tab view JSON from the file
+            with open(file_path, "r") as file:
+                view = json.load(file)
+
+            # Mapping dictionary
+            option_mapping = {
+                "option-convo":"*Conversations*",
+                "option-channels": "*Channels*",
+                "option-canvas": "*Canvas*",
+                "option-apps": "*Apps*"
+            }
+
+            # Modify the Block Kit JSON to display builder options
+            if builder_options:
+                selected_options = builder_options.get('multi_static_select-action', [])
+
+                # Map the selected values to their display names
+                display_values = [option_mapping.get(value, value) for value in selected_options]
+                    
+                if display_values:
+                    # Format the selected options into a string
+                    options_str = ", ".join(display_values)
+                    # Update the Block Kit view with the selected options
+                    view["blocks"][3]["elements"] = [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"Demo components currently configured: {options_str}"
+                        }
+                    ]
+                else:
+                    # Display a message when no options are selected
+                    view["blocks"][3]["elements"] = [
+                        {
+                            "type": "mrkdwn",
+                            "text": ":no_entry_sign: Demo components currently configured: *No selections.*"
+                        }
+                    ]
+            else:
+                # Handle case where there are no builder options in the database
+                view["blocks"][3]["elements"] = [
+                    {
+                        "type": "mrkdwn",
+                        "text": ":no_entry_sign: Demo components currently configured: *No selections.*"
+                    }
+                ]
+
+            # Publish the updated view to the Slack app home
+            client.views_publish(
+                user_id=event["user"],  # User ID from the event
+                view=view
+            )
+            
+            # Log the successful update
+            logger.info(f"Home tab updated for user {user_id}")
+
+    except Exception as e:
+        logger.error(f"Error updating home tab: {e}")
+
+
+@app.action("enter_builder_mode_button")
+def handle_enter_builder_mode(ack, body, client, mode):
+    ack()
+    try:
+        # Extract app_installed_team_id
+        app_installed_team_id = body["view"].get("app_installed_team_id")
+
+        user_id = body["user"]["id"]
+
+        # query = text("""
+        #     UPDATE user_builder_selections 
+        #     SET mode = 'builder', last_updated = :last_updated
+        #     WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
+        # """)
+        
+        # with engine.connect() as conn:
+        #     conn.execute(query, {
+        #         "user_id": user_id,
+        #         "app_installed_team_id": app_installed_team_id,
+        #         "mode": mode,
+        #         "last_updated": datetime.now(timezone.utc)
+        #     })
+        
+        db.update(
+            "user_builder_selections", 
+            {"mode": 'builder', "last_updated": datetime.now(timezone.utc)},
+            {"user_id": user_id, "app_installed_team_id": app_installed_team_id})
+        logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
+        
+        # Update the App Home
+        update_app_home_to_builder_mode(client, body["user"]["id"], app_installed_team_id)
+    except Exception as e:
+        logger.error(f"Error updating App Home to builder mode: {e}")
+
+def update_app_home_to_builder_mode(client, user_id, app_installed_team_id):
+    # Load the builder mode view JSON
+    view_path = os.path.join("block_kit", "builder_mode.json")
+    with open(view_path, "r") as file:
+        builder_view = json.load(file)
+
+    # Retrieve user selections from the database, passing app_installed_team_id
+    builder_options = get_user_selections(user_id, app_installed_team_id)  # Pass the app_installed_team_id here
+
+    # If selections are available, update the builder view with the selected options
+    if builder_options:
+        selected_values = builder_options.get("multi_static_select-action", [])
+  
+        # Loop through blocks and update multi_static_select
+        for block in builder_view["blocks"]:
+            if "accessory" in block and block["accessory"].get("type") == "multi_static_select":
+                accessory = block["accessory"]
+                if selected_values:
+                    # Filter the options based on selected values, add them to initial_options
+                    accessory["initial_options"] = [
+                        option for option in accessory["options"] if option["value"] in selected_values
+                    ]
+                else:
+                    # Remove initial_options if no options are selected
+                    if "initial_options" in accessory:
+                        del accessory["initial_options"]
+   
+  # Check if "Conversations" is selected and add additional Block Kit elements
+        if "option-convo" in selected_values:
+            # Append blocks for conversations
+            convo_divider_block = {
+                "type": "divider"
+            }
+    
+            convo_title_block = {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Conversations"
+                }
+		    }
+
+            convo_button_block = { 
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Configure"
+                        },
+                        "value": "setup-convo",
+                        "action_id": "setup-convo"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-convo",
+                        "action_id": "generate-convo"
+                    }
+                ]
+            }
+            builder_view["blocks"].append(convo_divider_block)
+            builder_view["blocks"].append(convo_title_block)
+            builder_view["blocks"].append(convo_button_block)
+            logger.debug("Added additional block for Conversations")
+
+        # Check if "Channels" is selected and add additional Block Kit elements
+        if "option-channels" in selected_values:
+            channels_divider_block = {
+                "type": "divider"
+            }
+    
+            channels_title_block = {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Channels"
+                }
+		    }
+
+            channels_button_block = { 
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Configure"
+                        },
+                        "value": "setup-channels",
+                        "action_id": "setup-channels"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-channels",
+                        "action_id": "generate-channels"
+                    }
+                ]
+            }
+            builder_view["blocks"].append(channels_divider_block)
+            builder_view["blocks"].append(channels_title_block)
+            builder_view["blocks"].append(channels_button_block)
+            logger.debug("Added additional block for Channels")
+
+        # Check if "Canvas" is selected and add additional Block Kit elements
+        if "option-canvas" in selected_values:
+            canvas_divider_block = {
+                "type": "divider"
+            }
+    
+            canvas_title_block = {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Canvas"
+                }
+		    }
+
+            canvas_button_block = {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Configure"
+                        },
+                        "value": "setup-canvas",
+                        "action_id": "setup-canvas"
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":sparkles: Generate"
+                        },
+                        "style": "primary",
+                        "value": "generate-canvas",
+                        "action_id": "generate-canvas"
+                    }
+                ]
+            }
+            builder_view["blocks"].append(canvas_divider_block)
+            builder_view["blocks"].append(canvas_title_block)
+            builder_view["blocks"].append(canvas_button_block)
+            logger.debug("Added additional block for Canvas")
+
+        # Check if "Apps" is selected and add additional Block Kit elements
+        if "option-apps" in selected_values:
+                apps_divider_block = {
+                    "type": "divider"
+                }
+        
+                apps_title_block = {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Apps"
+                    }
+                }
+
+                apps_button_block = {
                     "type": "actions",
-                    "block_id": "home_buttons",
                     "elements": [
                         {
                             "type": "button",
                             "text": {
                                 "type": "plain_text",
-                                "text": "Create Channels",
-                                "emoji": True
+                                "text": "Configure"
                             },
-                            "action_id": "open_channel_creator"
+                            "value": "setup-apps",
+                            "action_id": "setup-apps"
                         },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Saved Conversations",
-                                "emoji": True
-                            },
-                            "action_id": "view_saved_conversations"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Conversation History",
-                                "emoji": True
-                            },
-                            "action_id": "view_conversation_history"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "Conversation Analytics",
-                                "emoji": True
-                            },
-                            "action_id": "view_conversation_analytics"
-                        }
-                    ]
-                },
-                {
-                    "type": "divider"
-                },
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Let's build a demo!",
-                        "emoji": True
-                    }
-                },
-                {
-                    "type": "section",
-                    "block_id": "channel_select",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Choose a channel to work with:"
-                    },
-                    "accessory": {
-                        "type": "conversations_select",
-                        "placeholder": {
+                    {
+                        "type": "button",
+                        "text": {
                             "type": "plain_text",
-                            "text": "Select a channel",
-                            "emoji": True
+                            "text": ":sparkles: Generate"
                         },
-                        "action_id": "selected_channel",
-                        "filter": {
-                            "include": ["public", "private"],
-                            "exclude_bot_users": True
-                        }
+                        "style": "primary",
+                        "value": "generate-apps",
+                        "action_id": "generate-apps"
                     }
+                    ]
                 }
-            ]
-        }
+                builder_view["blocks"].append(apps_divider_block)
+                builder_view["blocks"].append(apps_title_block)
+                builder_view["blocks"].append(apps_button_block)
+                logger.debug("Added additional block for Apps")
 
-        # Publish the view
+
+    # Log the modified builder view JSON
+    logger.debug(f"Modified builder view JSON: {json.dumps(builder_view, indent=2)}")
+
+    # Update the App Home with the modified builder view
+    try:
         client.views_publish(
-            user_id=event["user"],
-            view=view
+            user_id=user_id,
+            view=builder_view
         )
+    except SlackApiError as e:
+        logger.error(f"Error updating App Home: {e}")
 
-    except Exception as e:
-        logger.error(f"Error updating home tab: {e}")
-
-@app.action("open_channel_creator")
-def handle_open_channel_creator(ack, body, client):
+@app.action("save_exit_builder_mode")
+def handle_save_exit_builder_mode(ack, body, client, mode):
     ack()
     try:
-        # Get user ID and any stored values
-        user_id = body["user"]["id"]
-        stored_values = user_inputs.get(user_id, {})
+        # Log the entire body for debugging
+        #logger.debug(f"Received body in save_exit_builder_mode: {json.dumps(body, indent=2)}")
+
+        # Extract app_installed_team_id safely
+        app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
+
+        if not app_installed_team_id:
+            logger.error("app_installed_team_id not found in body")
+            return
         
-        # Open modal with form
-        client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "callback_id": "channel_creator_submission",
-                "title": {
-                    "type": "plain_text",
-                    "text": "Channel Creator"
-                },
-                "submit": {
-                    "type": "plain_text",
-                    "text": "Generate Channels"
-                },
-                "blocks": [
-                    {
-                        "type": "input",
-                        "block_id": "customer_name_input",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "customer_name",
-                            "initial_value": stored_values.get("customer_name", ""),
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Enter customer name..."
-                            }
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Customer Name"
-                        },
-                        "optional": True
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "use_case_input",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "use_case",
-                            "initial_value": stored_values.get("use_case", ""),
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Describe your use case for channel creation..."
-                            },
-                            "multiline": True
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Use Case Description"
-                        }
-                    }
-                ]
+        # Extract user ID safely
+        user_id = body.get("user", {}).get("id")
+        
+        if not user_id:
+            logger.error("User ID not found in body")
+            return
+        
+        # Create an event-like dictionary for update_home_tab
+        event = {
+            "user": user_id,
+            "view": {"app_installed_team_id": app_installed_team_id}
+        }
+
+        # query = text("""
+        #     UPDATE user_builder_selections 
+        #     SET mode = 'home', last_updated = :last_updated
+        #     WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
+        # """)
+        
+        # with engine.connect() as conn:
+        #     conn.execute(query, {
+        #         "user_id": user_id,
+        #         "app_installed_team_id": app_installed_team_id,
+        #         "mode": mode,
+        #         "last_updated": datetime.now(timezone.utc)
+        #     })
+        db.update(
+            "user_builder_selections", 
+            {"mode": 'home', "last_updated": datetime.now(timezone.utc)},
+            {"user_id": user_id, "app_installed_team_id": app_installed_team_id}
+        )
+        logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
+
+        # Call update_home_tab with the correct parameters
+        update_home_tab(client, event, logger)
+    except Exception as e:
+        logger.error(f"Error exiting builder mode: {e}")
+
+
+@app.action("multi_static_select-action")
+def handle_some_action(ack, body, client, logger):
+    ack()
+    try:
+        # Get user ID and selections
+        user_id = body.get("user", {}).get("id")
+        app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
+        selections = body.get("view", {}).get("state", {}).get("values", {})
+        app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
+
+        if user_id is None:
+            logger.error("User ID not found in the request body")
+            return  # or handle this error case appropriately
+
+        if app_installed_team_id is None:
+            logger.error("app_installed_team_id not found in the request body")
+            return  # or handle this error case appropriately
+
+        if not selections:
+            logger.error("No selections found in the request body")
+            return  # or handle this error case appropriately
+
+        # Extract specific IDs or values from the selections
+        selected_values = {}
+        for block_id, block in selections.items():
+            for action_id, action in block.items():
+                if action["type"] == "multi_static_select":
+                    selected_values[action_id] = [option["value"] for option in action["selected_options"]]
+
+        # Save the selections to the database
+        save_user_selections(user_id, app_installed_team_id, selected_values)
+        
+        # Log the successful save
+        logger.info(f"Successfully saved selections for user {user_id}")
+        
+        # Reload the builder mode app view
+        update_app_home_to_builder_mode(client, user_id, app_installed_team_id)
+
+    except Exception as e:
+        logger.error(f"Error saving builder mode selections: {e}")
+
+# Database connection and save "builder mode" selections
+# DATABASE_URL = "postgresql://postgres:postgres@localhost/converse2"
+# engine = create_engine(DATABASE_URL)
+
+# def test_connection():
+#     try:
+#         with engine.connect() as connection:
+#             logger.debug("Database connection successful!")
+#             return True
+#     except Exception as e:
+#         logger.error(f"Failed to connect to the database: {e}")
+#         return False
+
+def save_user_selections(user_id, app_installed_team_id, selections):
+
+    # if not test_connection():
+    #     logger.error("Aborting: Unable to connect to the database.")
+    #     return
+    
+    try:
+        # query = text("""
+        #     INSERT INTO user_builder_selections (user_id, builder_options, last_updated, app_installed_team_id)
+        #     VALUES (:user_id, :builder_options, :last_updated, :app_installed_team_id)
+        #     ON CONFLICT (user_id, app_installed_team_id) 
+        #     DO UPDATE SET 
+        #         builder_options = EXCLUDED.builder_options,
+        #         last_updated = EXCLUDED.last_updated
+        # """)
+        # #logger.debug(f"Executing query for user_id {user_id}: {selections}")
+        
+        # with engine.connect() as conn:
+        #     conn.execute(query, {
+        #         "user_id": user_id,
+        #         "builder_options": json.dumps(selections),  # Convert selections to JSON string
+        #         "last_updated": datetime.now(timezone.utc),  # Use timezone-aware datetime
+        #         "app_installed_team_id": app_installed_team_id
+        #     })
+        #     conn.commit()
+        
+        db.insert(
+            "user_builder_selections", 
+            {
+                "user_id": user_id,
+                "builder_options": json.dumps(selections),  # Convert selections to JSON string
+                "last_updated": datetime.now(timezone.utc),  # Use timezone-aware datetime
+                "app_installed_team_id": app_installed_team_id
             }
         )
+        logger.debug(f"Successfully saved selections for user_id {user_id}")
     except Exception as e:
-        logger.error(f"Error opening channel creator modal: {e}")
+        logger.error(f"Error saving builder mode selections and mode: {e}")
+
+# Retrieve "builder mode" users selections
+def get_user_selections(user_id, app_installed_team_id):
+    try:
+        # query = text("SELECT builder_options FROM user_builder_selections WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id")
+        # with engine.connect() as conn:
+        #     result = conn.execute(query, {"user_id": user_id, "app_installed_team_id": app_installed_team_id}).fetchone()
+        result = db.fetch_one("SELECT builder_options FROM user_builder_options WHERE user_id = %s AND app_installed_team_id = %s", (user_id, app_installed_team_id))
+        logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {result}")
+        if result and result[0]:
+            return result[0]
+        return None
+    except Exception as e:
+        logger.error(f"Error getting user selections: {e}")
+        return None
+
+
+
+# @app.action("open_channel_creator")
+# def handle_open_channel_creator(ack, body, client):
+#     ack()
+#     try:
+#         # Get user ID and any stored values
+#         user_id = body["user"]["id"]
+#         stored_values = user_inputs.get(user_id, {})
+        
+#         # Open modal with form
+#         client.views_open(
+#             trigger_id=body["trigger_id"],
+#             view={
+#                 "type": "modal",
+#                 "callback_id": "channel_creator_submission",
+#                 "title": {
+#                     "type": "plain_text",
+#                     "text": "Channel Creator"
+#                 },
+#                 "submit": {
+#                     "type": "plain_text",
+#                     "text": "Generate Channels"
+#                 },
+#                 "blocks": [
+#                     {
+#                         "type": "input",
+#                         "block_id": "customer_name_input",
+#                         "element": {
+#                             "type": "plain_text_input",
+#                             "action_id": "customer_name",
+#                             "initial_value": stored_values.get("customer_name", ""),
+#                             "placeholder": {
+#                                 "type": "plain_text",
+#                                 "text": "Enter customer name..."
+#                             }
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Customer Name"
+#                         },
+#                         "optional": True
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "use_case_input",
+#                         "element": {
+#                             "type": "plain_text_input",
+#                             "action_id": "use_case",
+#                             "initial_value": stored_values.get("use_case", ""),
+#                             "placeholder": {
+#                                 "type": "plain_text",
+#                                 "text": "Describe your use case for channel creation..."
+#                             },
+#                             "multiline": True
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Use Case Description"
+#                         }
+#                     }
+#                 ]
+#             }
+#         )
+#     except Exception as e:
+#         logger.error(f"Error opening channel creator modal: {e}")
 
 @app.view("channel_creator_submission")
 def handle_channel_creator_submission(ack, body, client, view, logger):
@@ -469,7 +876,7 @@ def handle_generate_canvas(ack, body, client, logger):
             }
         )
 
-@app.action("selected_channel")
+# @app.action("selected_channel")
 def handle_channel_selection(ack, body, client, logger, returner=False):
     if not returner:
         ack()
@@ -649,291 +1056,291 @@ def handle_channel_selection(ack, body, client, logger, returner=False):
             text=f"❌ Error: Unable to load channel details.\nDetails: {str(e)}"
         )
 
-@app.action("generate_conversation")
-def handle_generate_conversation(ack, body, client, logger):
-    ack()
-    try:
-        selected_channel = body["actions"][0]["value"]
-        logger.info(f"Generating conversation for channel: {selected_channel}")
+# @app.action("generate_conversation")
+# def handle_generate_conversation(ack, body, client, logger):
+#     ack()
+#     try:
+#         selected_channel = body["actions"][0]["value"]
+#         logger.info(f"Generating conversation for channel: {selected_channel}")
 
-        # Get channel info
-        try:
-            channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
-            channel_details = channel_info["channel"]
+#         # Get channel info
+#         try:
+#             channel_info = client.conversations_info(channel=selected_channel, include_num_members=True)
+#             channel_details = channel_info["channel"]
             
-            # Extract relevant channel details
-            channel_name = channel_details["name"]
-            channel_topic = channel_details.get("topic", {}).get("value", "")
-            channel_purpose = channel_details.get("purpose", {}).get("value", "")
-            is_private = channel_details["is_private"]
-            member_count = channel_details["num_members"]
-            created_ts = channel_details["created"]
+#             # Extract relevant channel details
+#             channel_name = channel_details["name"]
+#             channel_topic = channel_details.get("topic", {}).get("value", "")
+#             channel_purpose = channel_details.get("purpose", {}).get("value", "")
+#             is_private = channel_details["is_private"]
+#             member_count = channel_details["num_members"]
+#             created_ts = channel_details["created"]
             
-            logger.info(f"Retrieved info for channel {channel_name}")
-            logger.debug(f"Topic: {channel_topic}")
-            logger.debug(f"Purpose: {channel_purpose}")
-            logger.debug(f"Is private: {is_private}")
-            logger.debug(f"Member count: {member_count}")
-            logger.debug(f"Created timestamp: {created_ts}")
+#             logger.info(f"Retrieved info for channel {channel_name}")
+#             logger.debug(f"Topic: {channel_topic}")
+#             logger.debug(f"Purpose: {channel_purpose}")
+#             logger.debug(f"Is private: {is_private}")
+#             logger.debug(f"Member count: {member_count}")
+#             logger.debug(f"Created timestamp: {created_ts}")
 
-            # Get member list for the channel
-            members_response = client.conversations_members(channel=selected_channel)
-            member_ids = members_response["members"]
+#             # Get member list for the channel
+#             members_response = client.conversations_members(channel=selected_channel)
+#             member_ids = members_response["members"]
 
-        except Exception as e:
-            logger.error(f"Error getting channel info: {e}")
-            raise
+#         except Exception as e:
+#             logger.error(f"Error getting channel info: {e}")
+#             raise
 
-        # Update modal with form
-        client.views_update(
-            view_id=body["container"]["view_id"],
-            view={
-                "type": "modal",
-                "callback_id": "conversation_generator_modal",
-                "title": {
-                    "type": "plain_text", 
-                    "text": "Generate Conversation"
-                },
-                "submit": {
-                    "type": "plain_text",
-                    "text": "Generate"
-                },
-                "private_metadata": selected_channel,
-                "blocks": [
-                    {
-                        "type": "header",
-                        "text": {
-                            "type": "plain_text",
-                            "text": f"Building conversation for #{channel_name}",
-                            "emoji": True
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "company_name",
-                        "optional": True,
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "company_name_input",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Enter company name"
-                            }
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Company Name (Optional)"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "industry",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "industry_select",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Select industry"
-                            },
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "Technology"}, "value": "technology"},
-                                {"text": {"type": "plain_text", "text": "Healthcare"}, "value": "healthcare"},
-                                {"text": {"type": "plain_text", "text": "Finance"}, "value": "finance"},
-                                {"text": {"type": "plain_text", "text": "Manufacturing"}, "value": "manufacturing"},
-                                {"text": {"type": "plain_text", "text": "Retail"}, "value": "retail"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Industry"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "topics",
-                        "optional": True,
-                        "element": {
-                            "type": "multi_static_select",
-                            "action_id": "topics_select",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Select topics"
-                            },
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "Product Development"}, "value": "product"},
-                                {"text": {"type": "plain_text", "text": "Marketing"}, "value": "marketing"},
-                                {"text": {"type": "plain_text", "text": "Sales"}, "value": "sales"},
-                                {"text": {"type": "plain_text", "text": "Customer Support"}, "value": "support"},
-                                {"text": {"type": "plain_text", "text": "Engineering"}, "value": "engineering"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Choose Topics (Optional)"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "custom_prompt",
-                        "optional": True,
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "custom_prompt_input",
-                            "multiline": True,
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Enter any specific instructions for conversation generation"
-                            }
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Custom Prompt Instructions (Optional)"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "num_participants",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "participants_select",
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "2-3"}, "value": "2-3"},
-                                {"text": {"type": "plain_text", "text": "4-6"}, "value": "4-6"},
-                                {"text": {"type": "plain_text", "text": "7-10"}, "value": "7-10"},
-                                {"text": {"type": "plain_text", "text": "11-15"}, "value": "11-15"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Number of Participants"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "num_posts",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "posts_select",
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "5-10"}, "value": "5-10"},
-                                {"text": {"type": "plain_text", "text": "11-20"}, "value": "11-20"},
-                                {"text": {"type": "plain_text", "text": "21-30"}, "value": "21-30"},
-                                {"text": {"type": "plain_text", "text": "31-50"}, "value": "31-50"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Number of Channel Posts"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "post_length",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "length_select",
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "Short (1-2 sentences)"}, "value": "short"},
-                                {"text": {"type": "plain_text", "text": "Medium (3-4 sentences)"}, "value": "medium"},
-                                {"text": {"type": "plain_text", "text": "Long (5+ sentences)"}, "value": "long"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Approximate Length of Each Post"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "tone",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "tone_select",
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "Formal"}, "value": "formal"},
-                                {"text": {"type": "plain_text", "text": "Casual"}, "value": "casual"},
-                                {"text": {"type": "plain_text", "text": "Professional"}, "value": "professional"},
-                                {"text": {"type": "plain_text", "text": "Technical"}, "value": "technical"},
-                                {"text": {"type": "plain_text", "text": "Executive"}, "value": "executive"},
-                                {"text": {"type": "plain_text", "text": "Legal"}, "value": "legal"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Tone of Conversation"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "emoji_density",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "emoji_select",
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "Few"}, "value": "few"},
-                                {"text": {"type": "plain_text", "text": "Average"}, "value": "average"},
-                                {"text": {"type": "plain_text", "text": "A Lot"}, "value": "lot"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Emoji Density"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "thread_replies",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "replies_select",
-                            "options": [
-                                {"text": {"type": "plain_text", "text": "0-2 replies"}, "value": "0-2"},
-                                {"text": {"type": "plain_text", "text": "3-5 replies"}, "value": "3-5"},
-                                {"text": {"type": "plain_text", "text": "6-10 replies"}, "value": "6-10"},
-                                {"text": {"type": "plain_text", "text": "11-15 replies"}, "value": "11+"}
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Approximate Thread Replies"
-                        }
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "save_conversation",
-                        "element": {
-                            "type": "checkboxes",
-                            "action_id": "save_conversation_checkbox",
-                            "options": [
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "Save Conversation Definition"
-                                    },
-                                    "value": "save_conversation",
-                                    "description": {
-                                        "type": "mrkdwn",
-                                        "text": "Enable re-use manually, or via Workflow? Saves the above values, not the generated conversation, so every run produces something new!"
-                                    }
-                                }
-                            ]
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Save Conversation"
-                        }
-                    }
-                ]
-            }
-        )
+#         # Update modal with form
+#         client.views_update(
+#             view_id=body["container"]["view_id"],
+#             view={
+#                 "type": "modal",
+#                 "callback_id": "conversation_generator_modal",
+#                 "title": {
+#                     "type": "plain_text", 
+#                     "text": "Generate Conversation"
+#                 },
+#                 "submit": {
+#                     "type": "plain_text",
+#                     "text": "Generate"
+#                 },
+#                 "private_metadata": selected_channel,
+#                 "blocks": [
+#                     {
+#                         "type": "header",
+#                         "text": {
+#                             "type": "plain_text",
+#                             "text": f"Building conversation for #{channel_name}",
+#                             "emoji": True
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "company_name",
+#                         "optional": True,
+#                         "element": {
+#                             "type": "plain_text_input",
+#                             "action_id": "company_name_input",
+#                             "placeholder": {
+#                                 "type": "plain_text",
+#                                 "text": "Enter company name"
+#                             }
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Company Name (Optional)"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "industry",
+#                         "element": {
+#                             "type": "static_select",
+#                             "action_id": "industry_select",
+#                             "placeholder": {
+#                                 "type": "plain_text",
+#                                 "text": "Select industry"
+#                             },
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "Technology"}, "value": "technology"},
+#                                 {"text": {"type": "plain_text", "text": "Healthcare"}, "value": "healthcare"},
+#                                 {"text": {"type": "plain_text", "text": "Finance"}, "value": "finance"},
+#                                 {"text": {"type": "plain_text", "text": "Manufacturing"}, "value": "manufacturing"},
+#                                 {"text": {"type": "plain_text", "text": "Retail"}, "value": "retail"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Industry"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "topics",
+#                         "optional": True,
+#                         "element": {
+#                             "type": "multi_static_select",
+#                             "action_id": "topics_select",
+#                             "placeholder": {
+#                                 "type": "plain_text",
+#                                 "text": "Select topics"
+#                             },
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "Product Development"}, "value": "product"},
+#                                 {"text": {"type": "plain_text", "text": "Marketing"}, "value": "marketing"},
+#                                 {"text": {"type": "plain_text", "text": "Sales"}, "value": "sales"},
+#                                 {"text": {"type": "plain_text", "text": "Customer Support"}, "value": "support"},
+#                                 {"text": {"type": "plain_text", "text": "Engineering"}, "value": "engineering"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Choose Topics (Optional)"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "custom_prompt",
+#                         "optional": True,
+#                         "element": {
+#                             "type": "plain_text_input",
+#                             "action_id": "custom_prompt_input",
+#                             "multiline": True,
+#                             "placeholder": {
+#                                 "type": "plain_text",
+#                                 "text": "Enter any specific instructions for conversation generation"
+#                             }
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Custom Prompt Instructions (Optional)"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "num_participants",
+#                         "element": {
+#                             "type": "static_select",
+#                             "action_id": "participants_select",
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "2-3"}, "value": "2-3"},
+#                                 {"text": {"type": "plain_text", "text": "4-6"}, "value": "4-6"},
+#                                 {"text": {"type": "plain_text", "text": "7-10"}, "value": "7-10"},
+#                                 {"text": {"type": "plain_text", "text": "11-15"}, "value": "11-15"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Number of Participants"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "num_posts",
+#                         "element": {
+#                             "type": "static_select",
+#                             "action_id": "posts_select",
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "5-10"}, "value": "5-10"},
+#                                 {"text": {"type": "plain_text", "text": "11-20"}, "value": "11-20"},
+#                                 {"text": {"type": "plain_text", "text": "21-30"}, "value": "21-30"},
+#                                 {"text": {"type": "plain_text", "text": "31-50"}, "value": "31-50"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Number of Channel Posts"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "post_length",
+#                         "element": {
+#                             "type": "static_select",
+#                             "action_id": "length_select",
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "Short (1-2 sentences)"}, "value": "short"},
+#                                 {"text": {"type": "plain_text", "text": "Medium (3-4 sentences)"}, "value": "medium"},
+#                                 {"text": {"type": "plain_text", "text": "Long (5+ sentences)"}, "value": "long"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Approximate Length of Each Post"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "tone",
+#                         "element": {
+#                             "type": "static_select",
+#                             "action_id": "tone_select",
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "Formal"}, "value": "formal"},
+#                                 {"text": {"type": "plain_text", "text": "Casual"}, "value": "casual"},
+#                                 {"text": {"type": "plain_text", "text": "Professional"}, "value": "professional"},
+#                                 {"text": {"type": "plain_text", "text": "Technical"}, "value": "technical"},
+#                                 {"text": {"type": "plain_text", "text": "Executive"}, "value": "executive"},
+#                                 {"text": {"type": "plain_text", "text": "Legal"}, "value": "legal"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Tone of Conversation"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "emoji_density",
+#                         "element": {
+#                             "type": "static_select",
+#                             "action_id": "emoji_select",
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "Few"}, "value": "few"},
+#                                 {"text": {"type": "plain_text", "text": "Average"}, "value": "average"},
+#                                 {"text": {"type": "plain_text", "text": "A Lot"}, "value": "lot"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Emoji Density"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "thread_replies",
+#                         "element": {
+#                             "type": "static_select",
+#                             "action_id": "replies_select",
+#                             "options": [
+#                                 {"text": {"type": "plain_text", "text": "0-2 replies"}, "value": "0-2"},
+#                                 {"text": {"type": "plain_text", "text": "3-5 replies"}, "value": "3-5"},
+#                                 {"text": {"type": "plain_text", "text": "6-10 replies"}, "value": "6-10"},
+#                                 {"text": {"type": "plain_text", "text": "11-15 replies"}, "value": "11+"}
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Approximate Thread Replies"
+#                         }
+#                     },
+#                     {
+#                         "type": "input",
+#                         "block_id": "save_conversation",
+#                         "element": {
+#                             "type": "checkboxes",
+#                             "action_id": "save_conversation_checkbox",
+#                             "options": [
+#                                 {
+#                                     "text": {
+#                                         "type": "plain_text",
+#                                         "text": "Save Conversation Definition"
+#                                     },
+#                                     "value": "save_conversation",
+#                                     "description": {
+#                                         "type": "mrkdwn",
+#                                         "text": "Enable re-use manually, or via Workflow? Saves the above values, not the generated conversation, so every run produces something new!"
+#                                     }
+#                                 }
+#                             ]
+#                         },
+#                         "label": {
+#                             "type": "plain_text",
+#                             "text": "Save Conversation"
+#                         }
+#                     }
+#                 ]
+#             }
+#         )
 
-    except Exception as e:
-        logger.error(f"Error generating conversation: {e}")
-        client.chat_postEphemeral(
-            channel=body["container"]["channel_id"],
-            user=body["user"]["id"],
-            text=f"❌ Error: Unable to generate conversation.\nDetails: {str(e)}"
-        )
+#     except Exception as e:
+#         logger.error(f"Error generating conversation: {e}")
+#         client.chat_postEphemeral(
+#             channel=body["container"]["channel_id"],
+#             user=body["user"]["id"],
+#             text=f"❌ Error: Unable to generate conversation.\nDetails: {str(e)}"
+#         )
 
 @app.view("conversation_generator_modal")
 def handle_conversation_generator_submission(ack, body, client, view, logger):

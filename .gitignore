@@ -1,5 +1,5 @@
 .env
-__pycache__/
+/__pycache__/*
 *.py[cod]
 __pycache__/factory.cpython-311.pyc
 __pycache__/logistics.cpython-311.pyc
