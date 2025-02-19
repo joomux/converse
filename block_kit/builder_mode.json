@@ -90,7 +90,7 @@
 						"value": "option-apps"
 					}
 				],
-				"action_id": "multi_static_select-action"
+				"action_id": "save_builder_config"
 			}
 		},
 		{
