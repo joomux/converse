@@ -1,0 +1,37 @@
+{
+	"title": {
+		"type": "plain_text",
+		"text": "Converse",
+		"emoji": true
+	},
+	"submit": {
+		"type": "plain_text",
+		"text": "Submit",
+		"emoji": true
+	},
+	"type": "modal",
+	"close": {
+		"type": "plain_text",
+		"text": "Cancel",
+		"emoji": true
+	},
+	"blocks": [
+		{
+			"type": "input",
+			"block_id": "use_case_input",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "use_case",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Describe your use case for channel creation..."
+				},
+				"multiline": true
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Use Case Description"
+			}
+		}
+	]
+}

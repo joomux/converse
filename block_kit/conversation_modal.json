@@ -1,0 +1,549 @@
+{
+	"title": {
+		"type": "plain_text",
+		"text": "Converse",
+		"emoji": true
+	},
+	"submit": {
+		"type": "plain_text",
+		"text": "Submit",
+		"emoji": true
+	},
+	"type": "modal",
+	"close": {
+		"type": "plain_text",
+		"text": "Cancel",
+		"emoji": true
+	},
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Conversation Scope",
+				"emoji": true
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "mrkdwn",
+					"text": "What should conversation in this channel be about?"
+				}
+			]
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":sparkles: *Design with AI?*"
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "AI Build",
+					"emoji": true
+				},
+				"value": "ai",
+				"action_id": "channel_build_with_ai"
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "input",
+			"block_id":"channel_description",
+			"element": {
+				"type": "plain_text_input",
+				"multiline": true,
+				"action_id": "channel_description_input"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":pencil: Channel Description",
+				"emoji": true
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "channel_topic",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "channel_topic_input"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":speaker: Current Channel Topic",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"block_id": "canvas",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":page_facing_up: *Create/Update Canvas Tab*"
+			},
+			"accessory": {
+				"type": "static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Yes/No",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Yes"
+						},
+						"value": "yes"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "No"
+						},
+						"value": "no"
+					}
+				],
+				"action_id":"do_nothing"
+			}
+		},
+		{
+			"type": "input",
+			"hint": {
+				"type": "plain_text",
+				"text": "Leave blank to reference the channel topic &amp; description"
+			},
+			"block_id": "topics",
+			"optional": true,
+			"element": {
+				"type": "multi_static_select",
+				"action_id": "topics_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select topics"
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Product Development"
+						},
+						"value": "product"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Marketing"
+						},
+						"value": "marketing"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Sales"
+						},
+						"value": "sales"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Customer Support"
+						},
+						"value": "support"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Engineering"
+						},
+						"value": "engineering"
+					}
+				]
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":dart: Choose Conversation Topics",
+				"emoji": true
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "apps",
+			"element": {
+				"type": "multi_static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select apps",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "*plain_text option 0*",
+							"emoji": true
+						},
+						"value": "value-0"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "*plain_text option 1*",
+							"emoji": true
+						},
+						"value": "value-1"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "*plain_text option 2*",
+							"emoji": true
+						},
+						"value": "value-2"
+					}
+				],
+				"action_id": "multi_static_select-action"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":package: Select Apps",
+				"emoji": true
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "These apps will be included in the conversation"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "custom_prompt",
+			"hint": {
+				"type": "plain_text",
+				"text": "Descibe the kind of conversation to generate, or jargon to use"
+			},
+			"optional": true,
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "custom_prompt_input",
+				"multiline": true,
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Enter any specific instructions for conversation generation"
+				}
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Custom Prompt Instructions"
+			}
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Conversation Parameters",
+				"emoji": true
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "How should these conversations be structured?",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"block_id": "num_participants",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":busts_in_silhouette: *Number of Participants*"
+			},
+			"accessory": {
+				"type": "static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select a range",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "2-3",
+							"emoji": true
+						},
+						"value": "2-3"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "5-10",
+							"emoji": true
+						},
+						"value": "5-10"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "11-20",
+							"emoji": true
+						},
+						"value": "11-20"
+					}
+				],
+				"action_id": "do_nothing"
+			}
+		},
+		{
+			"type": "section",
+			"block_id": "num_posts",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":speech_balloon: *Number of Channel Posts*"
+			},
+			"accessory": {
+				"type": "static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select a range",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "5-10",
+							"emoji": true
+						},
+						"value": "5-10"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "11-20",
+							"emoji": true
+						},
+						"value": "11-20"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "21-30",
+							"emoji": true
+						},
+						"value": "21-30"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "31-50",
+							"emoji": true
+						},
+						"value": "31-50"
+					}
+				],
+				"action_id": "do_nothing"
+			}
+		},
+		{
+			"type": "section",
+			"block_id": "post_length",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":speaking_head_in_silhouette: *Approximate Length of Each Post*"
+			},
+			"accessory": {
+				"type": "static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select an option",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Short (1-2 sentences)",
+							"emoji": true
+						},
+						"value": "short"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Medium (3-5 sentences)",
+							"emoji": true
+						},
+						"value": "medium"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Long (5-10 sentences)",
+							"emoji": true
+						},
+						"value": "long"
+					}
+				],
+				"action_id": "do_nothing"
+			}
+		},
+		{
+			"type": "section",
+			"block_id": "thread_replies",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":thread: *Approximate Replies per Post*"
+			},
+			"accessory": {
+				"type": "static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select a range",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "0-2 replies"
+						},
+						"value": "0-2"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "3-5 replies"
+						},
+						"value": "3-5"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "6-10 replies"
+						},
+						"value": "6-10"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "11-15 replies"
+						},
+						"value": "11+"
+					}
+				],
+				"action_id": "do_nothing"
+			}
+		},
+		{
+			"type": "section",
+			"block_id": "tone",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":female-artist: *Tone of Conversation*"
+			},
+			"accessory": {
+				"type": "static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select an option",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Formal"
+						},
+						"value": "formal"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Casual"
+						},
+						"value": "casual"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Professional"
+						},
+						"value": "professional"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Technical"
+						},
+						"value": "technical"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Executive"
+						},
+						"value": "executive"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Legal"
+						},
+						"value": "legal"
+					}
+				],
+				"action_id": "do_nothing"
+			}
+		},
+		{
+			"type": "section",
+			"block_id": "emoji_density",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":smiley: *Emoji Density*"
+			},
+			"accessory": {
+				"type": "static_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select an option",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Few"
+						},
+						"value": "few"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Average"
+						},
+						"value": "average"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "A Lot"
+						},
+						"value": "manyt"
+					}
+				],
+				"action_id": "do_nothing"
+			}
+		}
+	]
+}

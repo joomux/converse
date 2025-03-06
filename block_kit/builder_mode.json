@@ -33,6 +33,23 @@
 			]
 		},
 		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":sparkles: *Channel designer modal* (REMOVE ME!)"
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "Build (REMOVE ME!)",
+					"emoji": true
+				},
+				"value": "build",
+				"action_id": "channel_designer"
+			}
+		},
+		{
 			"type": "divider"
 		},
 		{

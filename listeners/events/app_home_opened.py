@@ -6,7 +6,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from utils.database import Database, DatabaseConfig
 from listeners.actions import builder
-from utils import builder
+from utils import builder as util_builder # avoid conflicts
 
 db = Database(DatabaseConfig())
 
@@ -31,7 +31,7 @@ def app_home_opened_callback(client: WebClient, event: dict, logger: Logger):
         else:
 
             # Retrieve the builder options from the database
-            builder_options = builder.get_user_selections(user_id, app_installed_team_id, logger=logger)  
+            builder_options = util_builder.get_user_selections(user_id, app_installed_team_id, logger=logger)  
 
             # Path to home_tab.json Block Kit template
             file_path = os.path.join("block_kit", "home_tab.json")
