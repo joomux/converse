@@ -3,8 +3,11 @@ from logging import Logger
 from slack_sdk import WebClient
 # from slack_sdk.errors import SlackApiError
 from slack_bolt import Ack
-# from utils.database import Database, DatabaseConfig
+from utils.database import Database, DatabaseConfig
 import json
+# from utils import builder
+
+db = Database(DatabaseConfig())
 
 def open_channel_creator(ack: Ack, body, client: WebClient, logger: Logger):
     ack()
@@ -76,11 +79,36 @@ def open_channel_creator(ack: Ack, body, client: WebClient, logger: Logger):
 
 def open_channel_selector(ack: Ack, body, client: WebClient, logger: Logger):
     ack()
-    logger.info("BUILDER STEP ONE")
+    logger.info("CHANNEL SELECTOR MODAL")
+
+    user_id = body["user"]["id"]
 
     # user_id = body["user"]["id"]
     trigger_id = body["trigger_id"]
     view_path = os.path.join("block_kit", "modal_channel_selector.json")
     with open(view_path, 'r') as file:
         selector = json.load(file)
+
+    # load the current config and set any previously selected channels as default
+    app_installed_team_id = body["view"]["app_installed_team_id"]
+        
+    query = "SELECT builder_options FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
+    result = db.fetch_one(query, (user_id, app_installed_team_id))["builder_options"]
+
+    logger.debug("DB RESULT")
+    logger.debug(result)
+
+    if "option-channels" in result and "selected" in result["option-channels"]:
+        logger.info("About to pre-select channels")
+        selected_channels = result["option-channels"]["selected"]
+        for block in selector["blocks"]: 
+        # do we have a matching param based on block_id?
+            if block.get("block_id") == "channels_selected":
+                logger.debug(f"Match on block_id in params. Working with \"{block.get('block_id')}\"")
+
+                block["element"]["initial_conversations"] = selected_channels
+               
+            else:
+                continue
+
     client.views_open(trigger_id=trigger_id, view=selector)

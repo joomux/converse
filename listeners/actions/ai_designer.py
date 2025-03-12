@@ -37,28 +37,6 @@ def ai_designer(ack: Ack, body, client: WebClient, logger: Logger):
     view_path = os.path.join("block_kit", "conversation_modal.json")
     with open(view_path, 'r') as file:
         conversation_modal = json.load(file)
-    
-    
-    # loop over the params and update the current value for the matching block_id item
-    # blocks = conversation_modal["blocks"]
-    # new_blocks = []
-    # for block_id, value in params.items():
-    #     for block in blocks:
-    #         if block.get("block_id") == block_id:
-    #             if "accessory" in block:
-    #                 if "static_select" in block["accessory"]:
-    #                     for option in block["accessory"]["options"]:
-    #                         if option["value"] == value:
-    #                             block["accessory"].set("initial_option", option)
-    #                             break
-    #                 elif "multi_static_select" in block["accessory"]:
-    #                     selected_options = [option for option in block["accessory"]["options"] if option["value"] in value.split(",")]
-    #                     block["accessory"].set("initial_options", selected_options)
-    #             elif "element" in block:
-    #                 if "plain_text_input" in block["element"]:
-    #                     block["element"].set("initial_value", value)
-    #             break
-    #     new_blocks.append(block)
 
     
     for block in conversation_modal["blocks"]: 

@@ -3,6 +3,10 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_bolt import Ack, Say
 from ai import devxp
+from utils.database import Database, DatabaseConfig
+from utils import builder
+
+db = Database(DatabaseConfig())
 
 def create_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     ack()
@@ -159,10 +163,32 @@ def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
 
         user_inputs = {}
 
-        logger.info(state_values)
+        logger.info("SELECT CHANNELS - BODY....")
+        logger.info(body)
+
+        logger.info("SELECT CHANNELS - VIEW....")
+        logger.info(view)
         # {'channels_selected': {'channels': {'type': 'multi_conversations_select', 'selected_conversations': ['C082QN4TJ85', 'C07VAASC5A8']}}}
         
         # TODO: store these values in memory
+        # Fetch team ID
+        app_installed_team_id = body["view"]["app_installed_team_id"]
+        
+        query = "SELECT builder_options FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
+        result = db.fetch_one(query, (user_id, app_installed_team_id))["builder_options"]
+
+        if "option-channels" not in result: # make sure we have a dict to work with
+            result["option-channels"] = {}
+        
+        result["option-channels"]["selected"] = state_values["channels_selected"]["channels"]["selected_conversations"] # this is an array/list
+
+        # now update the database row
+        builder.save_user_selections(
+            user_id=user_id,
+            app_installed_team_id=app_installed_team_id,
+            selections=result,
+            logger=logger
+        )
         
     except Exception as e:
         logger.error(f"Error in select_channels: {e}")
