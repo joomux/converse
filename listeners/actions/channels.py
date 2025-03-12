@@ -21,7 +21,7 @@ def open_channel_creator(ack: Ack, body, client: WebClient, logger: Logger):
             trigger_id=body["trigger_id"],
             view={
                 "type": "modal",
-                "callback_id": "channel_creator_submission",
+                "callback_id": "channels_creator_submission",
                 "title": {
                     "type": "plain_text",
                     "text": "Channel Creator"

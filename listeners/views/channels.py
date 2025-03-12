@@ -149,3 +149,20 @@ def create_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
                     }
                 ]}
         )
+
+def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
+    ack()
+
+    user_id = body["user"]["id"]
+    try:
+        state_values = view["state"]["values"]
+
+        user_inputs = {}
+
+        logger.info(state_values)
+        # {'channels_selected': {'channels': {'type': 'multi_conversations_select', 'selected_conversations': ['C082QN4TJ85', 'C07VAASC5A8']}}}
+        
+        # TODO: store these values in memory
+        
+    except Exception as e:
+        logger.error(f"Error in select_channels: {e}")
