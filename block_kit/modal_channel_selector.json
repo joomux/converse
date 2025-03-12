@@ -1,0 +1,51 @@
+{
+	"title": {
+		"type": "plain_text",
+		"text": "Select Channels",
+		"emoji": true
+	},
+	"submit": {
+		"type": "plain_text",
+		"text": "Submit",
+		"emoji": true
+	},
+	"type": "modal",
+	"close": {
+		"type": "plain_text",
+		"text": "Cancel",
+		"emoji": true
+	},
+	"blocks": [
+		{
+			"type": "section",
+			"block_id": "channels_select",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Select channels to create conversations"
+			},
+			"accessory": {
+				"type": "multi_conversations_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select channels",
+					"emoji": true
+				},
+				"action_id": "do_nothing",
+				"focus_on_load": true,
+				"filter":{
+					"include":["private", "public"],
+					"exclude_bot_users": true
+				}
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "mrkdwn",
+					"text": "_DM's and MPDM's cannot be selected_"
+				}
+			]
+		}
+	]
+}

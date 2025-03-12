@@ -10,7 +10,6 @@ from utils import builder as util_builder # avoid conflicts
 
 db = Database(DatabaseConfig())
 
-
 def app_home_opened_callback(client: WebClient, event: dict, logger: Logger):
     try:
         # Fetch builder options from the database for this user

@@ -27,7 +27,7 @@
                     },
                     "type": "button",
                     "value": "enter_builder_mode",
-                    "action_id": "enter_builder_mode_button"
+                    "action_id": "builder_step_one"
                 }
             ]
         },

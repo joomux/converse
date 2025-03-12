@@ -1,8 +1,10 @@
+import os
 from logging import Logger
 from slack_sdk import WebClient
 # from slack_sdk.errors import SlackApiError
 from slack_bolt import Ack
 # from utils.database import Database, DatabaseConfig
+import json
 
 def open_channel_creator(ack: Ack, body, client: WebClient, logger: Logger):
     ack()
@@ -70,3 +72,15 @@ def open_channel_creator(ack: Ack, body, client: WebClient, logger: Logger):
         )
     except Exception as e:
         logger.error(f"Error opening channel creator modal: {e}")
+
+
+def open_channel_selector(ack: Ack, body, client: WebClient, logger: Logger):
+    ack()
+    logger.info("BUILDER STEP ONE")
+
+    # user_id = body["user"]["id"]
+    trigger_id = body["trigger_id"]
+    view_path = os.path.join("block_kit", "modal_channel_selector.json")
+    with open(view_path, 'r') as file:
+        selector = json.load(file)
+    client.views_open(trigger_id=trigger_id, view=selector)

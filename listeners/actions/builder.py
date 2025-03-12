@@ -13,6 +13,17 @@ from listeners.events import app_home_opened
 db = Database(DatabaseConfig())
 
 
+def builder_step_one(ack: Ack, body, client: WebClient, mode, logger: Logger):
+    ack()
+    logger.info("BUILDER STEP ONE")
+
+    user_id = body["user"]["id"]
+    view_path = os.path.join("block_kit", "builder_mode_step_1.json")
+    with open(view_path, 'r') as file:
+        builder = json.load(file)
+    client.views_publish(user_id=user_id, view=builder)
+
+
 def handle_enter_builder_mode(ack: Ack, body, client: WebClient, mode, logger: Logger):
     ack()
     try:

@@ -17,19 +17,6 @@
 			}
 		},
 		{
-			"type": "input",
-			"element": {
-				"type": "plain_text_input",
-				"action_id": "plain_text_input-action"
-			},
-			"label": {
-				"type": "plain_text",
-				"text": "Name",
-				"emoji": true
-			}
-		},
-        TODO: ADD DETAILS ABOUT COMPANY NAME
-		{
 			"type": "actions",
 			"elements": [
 				{
@@ -44,6 +31,19 @@
 					"action_id": "save_exit_builder_mode"
 				}
 			]
+		},
+		{
+			"type": "input",
+			"block_id": "customer_name",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "customer_name_input"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Customer Name",
+				"emoji": true
+			}
 		},
 		{
 			"type": "divider"
@@ -73,8 +73,7 @@
 						"text": ":heavy_plus_sign: Create New Channels",
 						"emoji": true
 					},
-					"value": "click_me_123",
-					"action_id": "actionId-0"
+					"action_id": "channels_create"
 				},
 				{
 					"type": "button",
@@ -83,8 +82,7 @@
 						"text": ":heavy_check_mark: Select Existing Channels",
 						"emoji": true
 					},
-					"value": "click_me_123",
-					"action_id": "actionId-1"
+					"action_id": "channels_select"
 				}
 			]
 		},
@@ -116,8 +114,7 @@
 						"text": ":heavy_plus_sign: Create New App",
 						"emoji": true
 					},
-					"value": "click_me_123",
-					"action_id": "actionId-0"
+					"action_id": "app_create"
 				},
 				{
 					"type": "button",
@@ -126,8 +123,7 @@
 						"text": ":heavy_check_mark: Select Existing App",
 						"emoji": true
 					},
-					"value": "click_me_123",
-					"action_id": "actionId-1"
+					"action_id": "apps_select"
 				}
 			]
 		},
@@ -141,12 +137,12 @@
 					"type": "button",
 					"text": {
 						"type": "plain_text",
-						"text": "Next >>",
+						"text": "Next (this should only show when 1+ channel ready >>",
 						"emoji": true
 					},
 					"style": "primary",
-					"value": "click_me_123",
-					"action_id": "actionId-0"
+					"value": "2",
+					"action_id": "builder_step_two"
 				}
 			]
 		}
