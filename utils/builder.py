@@ -17,7 +17,7 @@ def get_user_selections(user_id, app_installed_team_id, logger: Logger):
         logger.info(f"Query result for user {user_id} in team {app_installed_team_id}: {result}")
         if result and result["builder_options"]:
             return result["builder_options"]
-        return None
+        return {}
     except Exception as e:
         logger.error(f"Error getting user selections: {e}")
         return None

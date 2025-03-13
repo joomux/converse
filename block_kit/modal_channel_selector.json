@@ -1,47 +1,183 @@
 {
-	"title": {
-		"type": "plain_text",
-		"text": "Select Channels",
-		"emoji": true
-	},
-	"submit": {
-		"type": "plain_text",
-		"text": "Submit",
-		"emoji": true
-	},
-	"type": "modal",
-	"callback_id": "channels_selected",
-	"close": {
-		"type": "plain_text",
-		"text": "Cancel",
-		"emoji": true
-	},
+	"type": "home",
 	"blocks": [
 		{
-			"type": "input",
-			"block_id": "channels_selected",
-			"label": {
+			"type": "header",
+			"text": {
 				"type": "plain_text",
-				"text": "Select channels to create conversations"
+				"text": ":toolbox: Builder Mode",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Define a custom demo with tailored messages, channels, canvases and more."
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"text": {
+						"text": "⇤ Save & Exit Builder Mode",
+						"type": "plain_text",
+						"emoji": true
+					},
+					"type": "button",
+					"style": "primary",
+					"value": "save_and_exit",
+					"action_id": "save_exit_builder_mode"
+				}
+			]
+		},
+		{
+			"type": "input",
+			"block_id": "demo_name",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "name",
+				"dispatch_action_config": {
+					"trigger_actions_on": [
+						"on_character_entered"
+					]
+				}
 			},
 			"hint": {
 				"type": "plain_text",
-				"text": "DM's and MPDM's cannot be selected"
+				"text": "The name of your demo or scenario"
 			},
-			"element": {
-				"type": "multi_conversations_select",
-				"placeholder": {
-					"type": "plain_text",
-					"text": "Select channels",
-					"emoji": true
-				},
-				"action_id": "channels",
-				"focus_on_load": true,
-				"filter": {
-					"include": ["private", "public"],
-					"exclude_bot_users": true
-				}
+			"dispatch_action": true,
+			"label": {
+				"type": "plain_text",
+				"text": "Demo Name",
+				"emoji": true
 			}
+		},
+		{
+			"type": "input",
+			"block_id": "customer_name",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "customer_name_input",
+				"dispatch_action_config": {
+					"trigger_actions_on": [
+						"on_character_entered"
+					]
+				}
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "The name of the customer, real or ficticious"
+			},
+			"dispatch_action": true,
+			"label": {
+				"type": "plain_text",
+				"text": "Customer Name",
+				"emoji": true
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": ":speech_balloon: Channels",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Select or create the channels where you demo will be built"
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": ":heavy_plus_sign: Create New Channels",
+						"emoji": true
+					},
+					"action_id": "channels_create"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": ":heavy_check_mark: Select Existing Channels",
+						"emoji": true
+					},
+					"action_id": "channels_select"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": ":package: Apps",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Select or create app Block Kit to be used as part of this demo. You can select which apps should appear in which channels."
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": ":heavy_plus_sign: Create New App",
+						"emoji": true
+					},
+					"action_id": "app_create"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": ":heavy_check_mark: Select Existing App",
+						"emoji": true
+					},
+					"action_id": "apps_select"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Next (this should only show when 1+ channel ready >>",
+						"emoji": true
+					},
+					"style": "primary",
+					"value": "2",
+					"action_id": "builder_step_two"
+				}
+			]
 		}
 	]
 }

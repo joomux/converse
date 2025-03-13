@@ -18,10 +18,47 @@ def builder_step_one(ack: Ack, body, client: WebClient, mode, logger: Logger):
     logger.info("BUILDER STEP ONE")
 
     user_id = body["user"]["id"]
+    app_installed_team_id = body["view"]["app_installed_team_id"]
     view_path = os.path.join("block_kit", "builder_mode_step_1.json")
     with open(view_path, 'r') as file:
-        builder = json.load(file)
-    client.views_publish(user_id=user_id, view=builder)
+        step_one = json.load(file)
+    
+    # Need to populate some stuff here from the builder_options
+    config = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
+
+    # now to set the value of name and customer in the UI
+    for block in step_one["blocks"]:
+        logger.debug(f"Checking block id {block.get('block_id', None)}")
+        if block.get("block_id", None) in ["name", "customer"] and config.get(block["block_id"], None) is not None:
+            logger.debug(f"Setting value to {block.get('block_id', None)}")
+            block["element"]["initial_value"] = config[block["block_id"]]
+    
+    # set the mode to builder
+    db.update(
+        "user_builder_selections", 
+        {"mode": 'builder', "last_updated": datetime.now(timezone.utc)},
+        {"user_id": user_id, "app_installed_team_id": app_installed_team_id}
+    )
+
+    client.views_publish(user_id=user_id, view=step_one)
+
+
+def basic_update(ack: Ack, body, client: WebClient, mode, logger: Logger):
+    ack()
+    logger.debug("ACTION.BASIC_UPDATE")
+    user_id = body["user"]["id"]
+    app_installed_team_id = body["view"]["app_installed_team_id"]
+    # logger.debug(body)
+        
+    result = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
+
+    data = body["actions"][0]
+    result[data["block_id"]] = data["value"]
+
+    # logger.debug("DB RESULT")
+    # logger.debug(result)
+
+    builder.save_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, selections=result, logger=logger)
 
 
 def handle_enter_builder_mode(ack: Ack, body, client: WebClient, mode, logger: Logger):
@@ -315,7 +352,7 @@ def save_exit_builder_mode(ack: Ack, body, client: WebClient, mode, logger: Logg
     ack()
     try:
         # Log the entire body for debugging
-        #logger.debug(f"Received body in save_exit_builder_mode: {json.dumps(body, indent=2)}")
+        # logger.debug(f"Received body in save_exit_builder_mode: {json.dumps(body, indent=2)}")
 
         # Extract app_installed_team_id safely
         app_installed_team_id = body.get("view", {}).get("app_installed_team_id")
@@ -337,24 +374,18 @@ def save_exit_builder_mode(ack: Ack, body, client: WebClient, mode, logger: Logg
             "view": {"app_installed_team_id": app_installed_team_id}
         }
 
-        # query = text("""
-        #     UPDATE user_builder_selections 
-        #     SET mode = 'home', last_updated = :last_updated
-        #     WHERE user_id = :user_id AND app_installed_team_id = :app_installed_team_id
-        # """)
-        
-        # with engine.connect() as conn:
-        #     conn.execute(query, {
-        #         "user_id": user_id,
-        #         "app_installed_team_id": app_installed_team_id,
-        #         "mode": mode,
-        #         "last_updated": datetime.now(timezone.utc)
-        #     })
-        db.update(
-            "user_builder_selections", 
-            {"mode": 'home', "last_updated": datetime.now(timezone.utc)},
-            {"user_id": user_id, "app_installed_team_id": app_installed_team_id}
-        )
+        if body["actions"][0]["value"] == "clear":
+            db.update(
+                "user_builder_selections", 
+                {"builder_options": None, "mode": 'home', "last_updated": datetime.now(timezone.utc)},
+                {"user_id": user_id, "app_installed_team_id": app_installed_team_id}
+            )
+        else:
+            db.update(
+                "user_builder_selections", 
+                {"mode": 'home', "last_updated": datetime.now(timezone.utc)},
+                {"user_id": user_id, "app_installed_team_id": app_installed_team_id}
+            )
         logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
 
         # Call update_home_tab with the correct parameters

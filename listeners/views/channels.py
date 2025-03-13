@@ -177,10 +177,14 @@ def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
         query = "SELECT builder_options FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
         result = db.fetch_one(query, (user_id, app_installed_team_id))["builder_options"]
 
-        if "option-channels" not in result: # make sure we have a dict to work with
-            result["option-channels"] = {}
+        logger.debug("DB RESULT")
+        logger.debug(result)
+
+        if "option-channels" not in result["save_builder_config"]: # make sure we have a dict to work with
+            result["save_builder_config"]["option-channels"] = {}
+            result["save_builder_config"]["option-channels"]["selected"] = []
         
-        result["option-channels"]["selected"] = state_values["channels_selected"]["channels"]["selected_conversations"] # this is an array/list
+        result["save_builder_config"]["option-channels"]["selected"] = state_values["channels_selected"]["channels"]["selected_conversations"] # this is an array/list
 
         # now update the database row
         builder.save_user_selections(

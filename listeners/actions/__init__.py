@@ -1,5 +1,5 @@
 from slack_bolt import App
-from .builder import handle_enter_builder_mode, save_builder_config, save_exit_builder_mode, builder_step_one
+from .builder import handle_enter_builder_mode, save_builder_config, save_exit_builder_mode, builder_step_one, basic_update
 from .channels import open_channel_creator, open_channel_selector
 from .ai_designer import ai_designer
 from .conversation import channel_designer
@@ -14,3 +14,6 @@ def register(app: App):
     app.action("channels_select")(open_channel_selector)
     app.action("channel_build_with_ai")(ai_designer)
     app.action("channel_designer")(channel_designer)
+    app.action("name_update")(basic_update)
+    app.action("customer_name_update")(basic_update)
+    app.action("clear")(save_exit_builder_mode)

@@ -29,16 +29,60 @@
 					"style": "primary",
 					"value": "save_and_exit",
 					"action_id": "save_exit_builder_mode"
+				},
+				{
+					"text": {
+						"text": "Clear",
+						"type": "plain_text",
+						"emoji": true
+					},
+					"type": "button",
+					"style": "danger",
+					"value": "clear",
+					"action_id": "clear"
 				}
 			]
 		},
 		{
 			"type": "input",
-			"block_id": "customer_name",
+			"block_id": "name",
 			"element": {
 				"type": "plain_text_input",
-				"action_id": "customer_name_input"
+				"action_id": "name_update",
+				"dispatch_action_config": {
+					"trigger_actions_on": [
+						"on_character_entered"
+					]
+				}
 			},
+			"hint": {
+				"type": "plain_text",
+				"text": "The name of your demo or scenario"
+			},
+			"dispatch_action": true,
+			"label": {
+				"type": "plain_text",
+				"text": "Demo Name",
+				"emoji": true
+			}
+		},
+		{
+			"type": "input",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "customer_name_update",
+				"dispatch_action_config": {
+					"trigger_actions_on": [
+						"on_character_entered"
+					]
+				}
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "The name of the customer, real or ficticious"
+			},
+			"dispatch_action": true,
+			"block_id": "customer",
 			"label": {
 				"type": "plain_text",
 				"text": "Customer Name",
