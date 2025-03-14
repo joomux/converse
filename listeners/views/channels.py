@@ -156,35 +156,35 @@ def create_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
 
 def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     ack()
-
+    logger.info("VIEWS > SELECT CHANNELS")
     user_id = body["user"]["id"]
     try:
         state_values = view["state"]["values"]
 
         user_inputs = {}
 
-        logger.info("SELECT CHANNELS - BODY....")
-        logger.info(body)
+        # logger.info("SELECT CHANNELS - BODY....")
+        # logger.info(body)
 
-        logger.info("SELECT CHANNELS - VIEW....")
-        logger.info(view)
+        # logger.info("SELECT CHANNELS - VIEW....")
+        # logger.info(view)
         # {'channels_selected': {'channels': {'type': 'multi_conversations_select', 'selected_conversations': ['C082QN4TJ85', 'C07VAASC5A8']}}}
         
-        # TODO: store these values in memory
         # Fetch team ID
         app_installed_team_id = body["view"]["app_installed_team_id"]
-        
-        query = "SELECT builder_options FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
-        result = db.fetch_one(query, (user_id, app_installed_team_id))["builder_options"]
 
-        logger.debug("DB RESULT")
-        logger.debug(result)
+        result = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
 
-        if "option-channels" not in result["save_builder_config"]: # make sure we have a dict to work with
-            result["save_builder_config"]["option-channels"] = {}
-            result["save_builder_config"]["option-channels"]["selected"] = []
+        # logger.debug("DB RESULT")
+        # logger.debug(result)
+
+        if "channels" not in result: # make sure we have a dict to work with
+            result["channels"] = {}
+        if "selected" not in result["channels"]:
+            result["channels"]["selected"] = []
         
-        result["save_builder_config"]["option-channels"]["selected"] = state_values["channels_selected"]["channels"]["selected_conversations"] # this is an array/list
+        
+        result["channels"]["selected"] = list(set(result["channels"]["selected"] + state_values["channels_selected"]["channels"]["selected_conversations"])) # this is an array/list
 
         # now update the database row
         builder.save_user_selections(
@@ -193,6 +193,8 @@ def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
             selections=result,
             logger=logger
         )
+
+        # TODO: update the home view here??? Or call a render_home_view function to do it all!
         
     except Exception as e:
         logger.error(f"Error in select_channels: {e}")

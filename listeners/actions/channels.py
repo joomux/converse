@@ -5,7 +5,7 @@ from slack_sdk import WebClient
 from slack_bolt import Ack
 from utils.database import Database, DatabaseConfig
 import json
-# from utils import builder
+from utils import builder
 
 db = Database(DatabaseConfig())
 
@@ -92,15 +92,19 @@ def open_channel_selector(ack: Ack, body, client: WebClient, logger: Logger):
     # load the current config and set any previously selected channels as default
     app_installed_team_id = body["view"]["app_installed_team_id"]
         
-    query = "SELECT builder_options FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
-    result = db.fetch_one(query, (user_id, app_installed_team_id))["builder_options"]
+    result = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
 
     logger.debug("DB RESULT")
     logger.debug(result)
 
-    if "option-channels" in result and "selected" in result["option-channels"]:
+    if "channels" not in result: # make sure we have a dict to work with
+            result["channels"] = {}
+    if "selected" not in result["channels"]:
+        result["channels"]["selected"] = []
+
+    if len(result["channels"]["selected"]) > 0:
         logger.info("About to pre-select channels")
-        selected_channels = result["option-channels"]["selected"]
+        selected_channels = result["channels"]["selected"]
         for block in selector["blocks"]: 
         # do we have a matching param based on block_id?
             if block.get("block_id") == "channels_selected":
