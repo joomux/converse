@@ -104,7 +104,7 @@ def open_channel_selector(ack: Ack, body, client: WebClient, logger: Logger):
 
     if len(result["channels"]["selected"]) > 0:
         logger.info("About to pre-select channels")
-        selected_channels = result["channels"]["selected"]
+        selected_channels = [conv["channel"]["id"] for conv in result["channels"]["selected"] if conv["channel"]["id"] is not None]
         for block in selector["blocks"]: 
         # do we have a matching param based on block_id?
             if block.get("block_id") == "channels_selected":

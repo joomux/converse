@@ -5,6 +5,7 @@ from slack_bolt import Ack, Say
 from ai import devxp
 from utils.database import Database, DatabaseConfig
 from utils import builder
+from utils.conversation_model import Conversation
 
 db = Database(DatabaseConfig())
 
@@ -183,8 +184,16 @@ def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
         if "selected" not in result["channels"]:
             result["channels"]["selected"] = []
         
+        channels = state_values["channels_selected"]["channels"]["selected_conversations"]
+
+        # need to build a conversation object from each of these selected channels!
+        selected_conversations = []
+        for channel_id in channels:
+            conversation = Conversation(channel_id=channel_id).format()
+            selected_conversations.append(conversation)
         
-        result["channels"]["selected"] = list(set(result["channels"]["selected"] + state_values["channels_selected"]["channels"]["selected_conversations"])) # this is an array/list
+        logger.debug(selected_conversations)
+        result["channels"]["selected"] = selected_conversations # this is an array/list
 
         # now update the database row
         builder.save_user_selections(
