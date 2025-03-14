@@ -6,6 +6,7 @@ from ai import devxp
 from utils.database import Database, DatabaseConfig
 from utils import builder
 from utils.conversation_model import Conversation
+from utils.app_view import render_app_view
 
 db = Database(DatabaseConfig())
 
@@ -204,6 +205,13 @@ def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
         )
 
         # TODO: update the home view here??? Or call a render_home_view function to do it all!
+        render_app_view(
+            client=client,
+            user_id=user_id,
+            app_installed_team_id=app_installed_team_id,
+            view_type="builder_step_1",
+            logger=logger
+        )
         
     except Exception as e:
         logger.error(f"Error in select_channels: {e}")
