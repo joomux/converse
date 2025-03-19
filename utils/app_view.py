@@ -64,11 +64,19 @@ def render_app_view(client: WebClient, user_id: str, app_installed_team_id: str,
 
             # TODO: FIX UP THIS! MAKE IT PRETTIER AND HANDLE ALL OTHER TYPES!
             # build custom_data from selected and to-create channels and apps
-            custom_data = {}
+            custom_data = {
+                "additional_blocks": []
+            }
             config = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
             if config.get("channels", {}).get('selected'):
-                custom_data["additional_blocks"] = [{"type": "section", "text": {"type": "mrkdwn", "text": f"Channel: <#{channel['channel']['id']}>"}} for channel in config["channels"]["selected"]]
+                custom_data["additional_blocks"].extend(_render_channels_selected(config.get("channels", {}).get('selected'), logger=logger))
+            if config.get("channels", {}).get('create'):
+                # custom_data["additional_blocks"] = [{"type": "section", "text": {"type": "mrkdwn", "text": f"Channel: <#{channel['channel']['id']}>"}} for channel in config["channels"]["create"]]
+                custom_data["additional_blocks"].extend(_render_channels_create(config.get("channels", {}).get('create'), logger=logger))
             
+            logger.info("-------------")
+            logger.info(custom_data)
+            logger.info("-------------")
         
         elif view_type == "builder":
             # Get builder options
@@ -190,3 +198,96 @@ def render_app_view(client: WebClient, user_id: str, app_installed_team_id: str,
         if logger:
             logger.error(f"Unexpected error rendering app view: {e}")
         return None 
+    
+
+def _render_channels_create(channels: list, logger: Logger):
+    logger.info("APP HOME> RENDER CHANNELS CREATE")
+    items = []
+    if channels is not None:
+        logger.info(channels)
+        for channel_struct in channels.get("channels", []):
+            channel = channel_struct.get("channel")
+            if channel is not None:
+                logger.info(channel)
+                items.append({
+                    "type": "rich_text_section",
+                    "elements": [
+                        {
+                            "type": "text",
+                            "text": f"#{channel['name']}{' (private)' if channel['is_private'] else ''}"
+                        }
+                    ]
+                })
+
+    wrapper = [
+        {
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*These channels will be created*"
+			}
+		},
+        {
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f'> {channels["use_case"]}'
+			}
+		},
+        {
+        "type": "rich_text",
+        "elements": [
+            {
+                "type": "rich_text_list",
+                "style": "bullet",
+                "indent": 0,
+                "elements": items
+            }
+        ]
+    }]
+
+    return wrapper
+
+def _render_channels_selected(channels: list, logger: Logger):
+    logger.info("APP HOME> RENDER CHANNELS SELECTED")
+    # return [{"type": "section", "text": {"type": "mrkdwn", "text": f"Channel: <#{channel['channel']['id']}>"}} for channel in channels]
+
+    items = []
+    if channels is not None:
+        logger.info(channels)
+        for channel_struct in channels:
+            channel = channel_struct.get("channel")
+            if channel is not None:
+                logger.info(channel)
+                items.append({
+                    "type": "rich_text_section",
+                    "elements": [
+                        {
+                            "type": "channel",
+                            "channel_id": channel['id']
+                        }
+                    ]
+                })
+
+    wrapper = [
+        {
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*These channels will be available*"
+			}
+		},
+        {
+        "type": "rich_text",
+        "elements": [
+            {
+                "type": "rich_text_list",
+                "style": "bullet",
+                "indent": 0,
+                "elements": items
+            }
+        ]
+    }]
+
+    return wrapper
+    

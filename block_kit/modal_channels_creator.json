@@ -1,15 +1,16 @@
 {
 	"title": {
 		"type": "plain_text",
-		"text": "Converse",
+		"text": "AI Channel Creator",
 		"emoji": true
 	},
 	"submit": {
 		"type": "plain_text",
-		"text": "Submit",
+		"text": "Generate",
 		"emoji": true
 	},
 	"type": "modal",
+	"callback_id": "channel_creator_submission",
 	"close": {
 		"type": "plain_text",
 		"text": "Cancel",
@@ -31,6 +32,10 @@
 			"label": {
 				"type": "plain_text",
 				"text": "Use Case Description"
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "Describe the problem your demo is trying to solve."
 			}
 		}
 	]

@@ -11,68 +11,32 @@ db = Database(DatabaseConfig())
 
 def open_channel_creator(ack: Ack, body, client: WebClient, logger: Logger):
     ack()
+    logger.info("ACTIONS>OPEN_CHANNEL_CREATOR")
+
+    user_id = body["user"]["id"]
+    app_installed_team_id = body["view"]["app_installed_team_id"]
+    trigger_id = body["trigger_id"]
+
+    view_path = os.path.join("block_kit", "modal_channels_creator.json")
+    with open(view_path, 'r') as file:
+        modal = json.load(file)
     try:
-        # Get user ID and any stored values
-        user_id = body["user"]["id"]
-        logger.debug("\n\n===================BODY=====================")
-        logger.debug(body)
-        logger.debug("===================BODY=====================\n\n")
-        stored_values = {} #user_inputs.get(user_id, {})
-        
-        # Open modal with form
+        config = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
+        create_string = config.get("channels", {}).get("create", {}).get("use_case", None)
+
+        for block in modal["blocks"]:
+            if logger:
+                logger.debug(f"Checking block id {block.get('block_id', None)}")
+            if block.get("block_id", None) is "use_case_input" and config.get(block["block_id"], None) is not None:
+                if logger:
+                    logger.debug(f"Setting value to {block.get('block_id', None)}")
+                block["element"]["initial_value"] = create_string
+
         client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "callback_id": "channels_creator_submission",
-                "title": {
-                    "type": "plain_text",
-                    "text": "Channel Creator"
-                },
-                "submit": {
-                    "type": "plain_text",
-                    "text": "Generate Channels"
-                },
-                "blocks": [
-                    {
-                        "type": "input",
-                        "block_id": "customer_name_input",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "customer_name",
-                            "initial_value": stored_values.get("customer_name", ""),
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Enter customer name..."
-                            }
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Customer Name"
-                        },
-                        "optional": True
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "use_case_input",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "use_case",
-                            "initial_value": stored_values.get("use_case", ""),
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Describe your use case for channel creation..."
-                            },
-                            "multiline": True
-                        },
-                        "label": {
-                            "type": "plain_text",
-                            "text": "Use Case Description"
-                        }
-                    }
-                ]
-            }
+            trigger_id=trigger_id,
+            view=modal
         )
+        
     except Exception as e:
         logger.error(f"Error opening channel creator modal: {e}")
 

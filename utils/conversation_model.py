@@ -27,13 +27,14 @@ conv_dict = conv.to_dict()
 import json
 
 class Conversation:
-    def __init__(self, channel_id=None, channel_name=None, channel_topic=None, channel_description=None):
+    def __init__(self, channel_id=None, channel_name=None, channel_topic=None, channel_description=None, channel_is_private=0):
         # Channel information
         self._channel = {
             "id": channel_id,
             "name": channel_name,
             "topic": channel_topic,
-            "description": channel_description
+            "description": channel_description,
+            "is_private": channel_is_private
         }
         
         # Apps list
@@ -78,6 +79,12 @@ class Conversation:
         
     def get_channel_description(self):
         return self._channel["description"]
+        
+    def set_channel_is_private(self, channel_is_private):
+        self._channel["is_private"] = channel_is_private
+        
+    def get_channel_is_private(self):
+        return self._channel["is_private"]
     
     # Apps methods
     def add_app(self, app_id=None, name=None, icon_url=None, frequency=None, block_kit=None):
@@ -211,7 +218,8 @@ class Conversation:
                 "id": self._channel["id"],
                 "name": self._channel["name"],
                 "topic": self._channel["topic"],
-                "description": self._channel["description"]
+                "description": self._channel["description"],
+                "is_private": self._channel["is_private"]
             },
             "apps": self._apps,
             "canvas": self._canvas,
@@ -243,6 +251,8 @@ class Conversation:
                 conversation.set_channel_topic(channel["topic"])
             if "description" in channel:
                 conversation.set_channel_description(channel["description"])
+            if "is_private" in channel:
+                conversation.set_channel_is_private(channel["is_private"])
         
         # Set apps
         if "apps" in data and isinstance(data["apps"], list):
