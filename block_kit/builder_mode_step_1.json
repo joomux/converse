@@ -131,7 +131,8 @@
 			]
 		},
 		{
-			"type": "divider"
+			"type": "divider",
+			"block_id":"post_channels_divider"
 		},
 		{
 			"type": "header",

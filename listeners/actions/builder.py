@@ -9,11 +9,30 @@ from utils.database import Database, DatabaseConfig
 from utils import user
 from datetime import datetime, timezone
 from listeners.events import app_home_opened
+from utils.app_view import render_app_view
 
 db = Database(DatabaseConfig())
 
+def builder_step_one(ack: Ack, body, client: WebClient, logger: Logger):
+    ack()
+    logger.info("BUILDER STEP ONE")
+    user_id = body["user"]["id"]
+    app_installed_team_id = body["view"]["app_installed_team_id"]
 
-def builder_step_one(ack: Ack, body, client: WebClient, mode, logger: Logger):
+    render_app_view(
+        client=client,
+        user_id=user_id,
+        app_installed_team_id=app_installed_team_id,
+        view_type="builder_step_1",
+        logger=logger
+    )
+    
+def _builder_step_one(ack: Ack, body, client: WebClient, mode, logger: Logger):
+    """
+    This function should now be deprecated
+    """
+    exit
+    
     ack()
     logger.info("BUILDER STEP ONE")
 

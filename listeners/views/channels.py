@@ -5,6 +5,9 @@ from slack_bolt import Ack, Say
 from ai import devxp
 from utils.database import Database, DatabaseConfig
 from utils import builder
+from utils.conversation_model import Conversation
+from utils.app_view import render_app_view
+import json, os
 
 db = Database(DatabaseConfig())
 
@@ -12,6 +15,8 @@ def create_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
     ack()
     # Move the channel generation logic from handle_generate_channels here
     user_id = body["user"]["id"]
+    # Fetch team ID
+    app_installed_team_id = body["view"]["app_installed_team_id"]
     try:
         state_values = view["state"]["values"]
 
@@ -35,99 +40,150 @@ def create_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
         
         # Rest of your existing channel generation logic from handle_generate_channels...
         # Show loading modal
-        view_modal = client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "title": {
-                    "type": "plain_text",
-                    "text": "Creating Channels"
-                },
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "🔄 Generating channels based on your input...\nThis may take a few moments."
-                        }
-                    }
-                ]
-            }
-        )
+        # view_modal = client.views_open(
+        #     trigger_id=body["trigger_id"],
+        #     view={
+        #         "type": "modal",
+        #         "title": {
+        #             "type": "plain_text",
+        #             "text": "Figuring out channels..."
+        #         },
+        #         "blocks": [
+        #             {
+        #                 "type": "section",
+        #                 "text": {
+        #                     "type": "mrkdwn",
+        #                     "text": "🔄 Generating channels based on your input...\nThis may take a few moments."
+        #                 }
+        #             }
+        #         ]
+        #     }
+        # )
+
+        view_path = os.path.join("block_kit", "loading.json")
+        with open(view_path, 'r') as file:
+            loading_modal = json.load(file)
+        view_modal =client.views_open(trigger_id=body["trigger_id"], view=loading_modal)
 
         try:
 
             channels_list = devxp.fetch_channels(customer_name, use_case)
             # created_channels = logistics._send_channels(client, user_id, channels_list)
             created_channels = []
+            blocks = []
             for channel_def in channels_list:
                 logger.info(channel_def)
                 try:
-                    channel_created = client.conversations_create(
-                        name=channel_def["name"],
-                        is_private=channel_def["is_private"]==1
-                    )
-                    # Set channel topic and purpose if provided
-                    if "topic" in channel_def:
-                        client.conversations_setTopic(
-                            channel=channel_created["channel"]["id"],
-                            topic=channel_def["topic"]
-                        )
+                    # channel_created = client.conversations_create(
+                    #     name=channel_def["name"],
+                    #     is_private=channel_def["is_private"]==1
+                    # )
+                    # # Set channel topic and purpose if provided
+                    # if "topic" in channel_def:
+                    #     client.conversations_setTopic(
+                    #         channel=channel_created["channel"]["id"],
+                    #         topic=channel_def["topic"]
+                    #     )
                     
-                    if "description" in channel_def:
-                        client.conversations_setPurpose(
-                            channel=channel_created["channel"]["id"], 
-                            purpose=channel_def["description"]
-                        )
+                    # if "description" in channel_def:
+                    #     client.conversations_setPurpose(
+                    #         channel=channel_created["channel"]["id"], 
+                    #         purpose=channel_def["description"]
+                    #     )
                     
-                    # Add user as member and channel owner
-                    client.conversations_invite(
-                        channel=channel_created["channel"]["id"],
-                        users=user_id
-                    )
-
-                    # # Add the bot to the channel
+                    # # Add user as member and channel owner
                     # client.conversations_invite(
                     #     channel=channel_created["channel"]["id"],
-                    #     users=client.auth_test()["user_id"]
+                    #     users=user_id
                     # )
 
-                    # Send DM to user about channel creation
-                    # dm_result = client.chat_postMessage(
-                    #     channel=user_id,
-                    #     text=f"✨ Created channel <#{channel_created['channel']['id']}>\n" + 
-                    #         (f"> {channel_def.get('description', 'No description provided')}")
-                    # )
+                    conversation = Conversation(
+                        channel_name=channel_def["name"],
+                        channel_topic=channel_def["topic"],
+                        channel_description=channel_def["description"],
+                        channel_is_private=channel_def["is_private"]
+                    ).format()
+                    created_channels.append(conversation)
 
-                    created_channels.append(channel_created["channel"]["id"])
+                    blocks.append(
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": f"#{channel_def['name']}{' (private)' if channel_def['is_private'] else ''}"
+                                }
+                            ]
+                        }
+                    )
                     
-                except SlackApiError as e:
+                except Exception as e:
                     logger.error(f"Error creating channel {channel_def['name']}: {e}")
                     continue
-                    
-            # client.chat_postMessage(
-            #     channel=user_id,
-            #     text=f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
-            # )
-            say(
-                channel=user_id,
-                text=f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
+            
+            result = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
+            logger.debug(created_channels)
+
+            # Fix: Store both the channels and use case in a dictionary
+            result["channels"]["create"] = {
+                "channels": created_channels,
+                "use_case": use_case
+            }
+
+            # now update the database row
+            builder.save_user_selections(
+                user_id=user_id,
+                app_installed_team_id=app_installed_team_id,
+                selections=result,
+                logger=logger
             )
+            
 
             # TODO: Could store this in some temporary place to reference on the builder main view
             # Close loading modal
             client.views_update(
                 view_id=view_modal["view"]["id"],
-                view={"type": "modal", "title": {"type": "plain_text", "text": "Creating Channels"}, "blocks": [
+                view={
+                    "type": "modal", 
+                    "title": {
+                        "type": "plain_text", 
+                        "text": "Creating Channels"
+                    }, 
+                    "close": {
+                        "type": "plain_text", 
+                        "text": "OK"
+                    },
+                    "callback_id": "modal_channel_creater_result",
+                    "notify_on_close": True,
+                    "blocks": [
                         {
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": f"✅ Created {len(created_channels)} channels:\n" + "\n".join([f"<#{channel_id}>" for channel_id in created_channels])
+                                "text": f"{len(created_channels)} channels to be created. Note that these channels have not been created yet. They will be created when the demo content is generated.\n" 
                             }
+                        },
+                        {
+                            "type": "rich_text",
+                            "elements": [
+                                {
+                                    "type": "rich_text_list",
+                                    "style": "bullet",
+                                    "indent": 0,
+                                    "elements": blocks
+                                }
+                            ]
                         }
-                    ]}
+                    ]
+                    }
             )
+            # render_app_view(
+            #     client=client,
+            #     user_id=user_id,
+            #     app_installed_team_id=app_installed_team_id,
+            #     view_type="builder_step_1",
+            #     logger=logger
+            # )
         except Exception as e:
             logger.error(f"Error in channel creation: {e}")
 
@@ -137,10 +193,10 @@ def create_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
         #     channel=user_id,
         #     text=f"❌ Error creating channels: {str(e)}"
         # )
-        say(
-            channel=user_id,
-            text=f"❌ Error creating channels: {str(e)}"
-        )
+        # say(
+        #     channel=user_id,
+        #     text=f"❌ Error creating channels: {str(e)}"
+        # )
         client.views_update(
             view_id=view_modal["view"]["id"],
             view={"type": "modal", "title": {"type": "plain_text", "text": "Creating Channels"}, "blocks": [
@@ -156,35 +212,43 @@ def create_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
 
 def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     ack()
-
+    logger.info("VIEWS > SELECT CHANNELS")
     user_id = body["user"]["id"]
     try:
         state_values = view["state"]["values"]
 
         user_inputs = {}
 
-        logger.info("SELECT CHANNELS - BODY....")
-        logger.info(body)
+        # logger.info("SELECT CHANNELS - BODY....")
+        # logger.info(body)
 
-        logger.info("SELECT CHANNELS - VIEW....")
-        logger.info(view)
+        # logger.info("SELECT CHANNELS - VIEW....")
+        # logger.info(view)
         # {'channels_selected': {'channels': {'type': 'multi_conversations_select', 'selected_conversations': ['C082QN4TJ85', 'C07VAASC5A8']}}}
         
-        # TODO: store these values in memory
         # Fetch team ID
         app_installed_team_id = body["view"]["app_installed_team_id"]
-        
-        query = "SELECT builder_options FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
-        result = db.fetch_one(query, (user_id, app_installed_team_id))["builder_options"]
 
-        logger.debug("DB RESULT")
-        logger.debug(result)
+        result = builder.get_user_selections(user_id=user_id, app_installed_team_id=app_installed_team_id, logger=logger)
 
-        if "option-channels" not in result["save_builder_config"]: # make sure we have a dict to work with
-            result["save_builder_config"]["option-channels"] = {}
-            result["save_builder_config"]["option-channels"]["selected"] = []
+        # logger.debug("DB RESULT")
+        # logger.debug(result)
+
+        if "channels" not in result: # make sure we have a dict to work with
+            result["channels"] = {}
+        if "selected" not in result["channels"]:
+            result["channels"]["selected"] = []
         
-        result["save_builder_config"]["option-channels"]["selected"] = state_values["channels_selected"]["channels"]["selected_conversations"] # this is an array/list
+        channels = state_values["channels_selected"]["channels"]["selected_conversations"]
+
+        # need to build a conversation object from each of these selected channels!
+        selected_conversations = []
+        for channel_id in channels:
+            conversation = Conversation(channel_id=channel_id).format()
+            selected_conversations.append(conversation)
+        
+        logger.debug(selected_conversations)
+        result["channels"]["selected"] = selected_conversations # this is an array/list
 
         # now update the database row
         builder.save_user_selections(
@@ -193,6 +257,30 @@ def select_channels(ack: Ack, body, client: WebClient, view, logger: Logger, say
             selections=result,
             logger=logger
         )
+
+        # TODO: update the home view here??? Or call a render_home_view function to do it all!
+        render_app_view(
+            client=client,
+            user_id=user_id,
+            app_installed_team_id=app_installed_team_id,
+            view_type="builder_step_1",
+            logger=logger
+        )
         
     except Exception as e:
         logger.error(f"Error in select_channels: {e}")
+
+
+def reload_app_home(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
+    ack()
+    logger.info("VIEWS>CHANNEL: RELOAD APP HOME")
+    user_id = body["user"]["id"]
+    app_installed_team_id = body["view"]["app_installed_team_id"]
+    
+    render_app_view(
+        client=client,
+        user_id=user_id,
+        app_installed_team_id=app_installed_team_id,
+        view_type="builder_step_1",
+        logger=logger
+    )
