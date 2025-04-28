@@ -182,7 +182,7 @@
 					"type": "button",
 					"text": {
 						"type": "plain_text",
-						"text": "Next (this should only show when 1+ channel ready >>",
+						"text": "Next >>",
 						"emoji": true
 					},
 					"style": "primary",

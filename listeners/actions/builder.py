@@ -26,6 +26,13 @@ def builder_step_one(ack: Ack, body, client: WebClient, logger: Logger):
         view_type="builder_step_1",
         logger=logger
     )
+
+def builder_step_two(ack: Ack, body, client: WebClient, logger: Logger):
+    ack()
+    logger.info("BUILDER STEP TWO")
+    user_id = body["user"]["id"]
+    app_installed_team_id = body["view"]["app_installed_team_id"]
+    
     
 def _builder_step_one(ack: Ack, body, client: WebClient, mode, logger: Logger):
     """
