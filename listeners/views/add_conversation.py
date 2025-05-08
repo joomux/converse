@@ -189,7 +189,7 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
             canvas_result = "Error"
             logger.error(f"Error creating canvas: {e}")
             loading_view = helper.loading_formatter(
-                posts=f"{data_counter['posts']}/{total_posts}",
+                posts="Calculating...",
                 replies="Calculating...",
                 canvas=canvas_result,
                 current="Generating replies"
