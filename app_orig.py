@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timezone
 import factory
 import logistics
-import worker
+import utils.worker as worker
 import conversation
 from objects import Database, DatabaseConfig
 from typing import Dict, Any

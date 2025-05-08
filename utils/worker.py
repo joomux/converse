@@ -2,7 +2,7 @@ from slack_bolt import App
 from slack_sdk.errors import SlackApiError
 import logging
 import time
-from objects import Database, DatabaseConfig
+from .database import Database, DatabaseConfig
 from typing import Dict, Any
 
 logging.basicConfig(level=logging.DEBUG)

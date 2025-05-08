@@ -3,7 +3,7 @@ from objects import Database, DatabaseConfig
 from typing import Dict, Any
 import logging
 import time
-import worker
+import utils.worker as worker
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
