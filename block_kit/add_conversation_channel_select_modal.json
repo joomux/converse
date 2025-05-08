@@ -1,0 +1,50 @@
+{
+	"type": "modal",
+	"title": {
+		"type": "plain_text",
+		"text": "Add Conversation",
+		"emoji": true
+	},
+	"submit": {
+		"type": "plain_text",
+		"text": "Continue :thumbsup:",
+		"emoji": true
+	},
+	"close": {
+		"type": "plain_text",
+		"text": "Cancel",
+		"emoji": true
+	},
+	"callback_id": "add_conversation_channel_select",
+	"blocks": [
+		{
+			"type": "input",
+            "block_id":"add_conversation_channel_selector",
+			"hint": {
+				"type": "plain_text",
+				"text": "For private channels, ensure Converse has been added as an app member first"
+			},
+			"element": {
+				"type": "conversations_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select channel to populate",
+					"emoji": true
+				},
+				"default_to_current_conversation": true,
+				"action_id": "conversation_select",
+				"filter": {
+					"include": [
+						"public",
+						"private"
+					]
+				}
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":dart: Target Channel",
+				"emoji": true
+			}
+		}
+	]
+}

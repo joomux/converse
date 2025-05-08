@@ -10,12 +10,12 @@
 		"emoji": true
 	},
 	"type": "modal",
+	"callback_id": "conversation_generator_modal",
 	"close": {
 		"type": "plain_text",
 		"text": "Cancel",
 		"emoji": true
 	},
-	"callback_id": "conversation_generate",
 	"blocks": [
 		{
 			"type": "header",
@@ -56,7 +56,7 @@
 		},
 		{
 			"type": "input",
-			"block_id":"channel_description",
+			"block_id": "channel_description",
 			"element": {
 				"type": "plain_text_input",
 				"multiline": true,
@@ -111,24 +111,61 @@
 						"value": "no"
 					}
 				],
-				"action_id":"do_nothing"
+				"action_id": "do_nothing"
 			}
 		},
 		{
 			"type": "input",
 			"hint": {
 				"type": "plain_text",
-				"text": "Comma-separated list of topics, or leave blank to reference the channel topic &amp; description"
+				"text": "Leave blank to reference the channel topic &amp; description"
 			},
 			"block_id": "topics",
 			"optional": true,
 			"element": {
-				"type": "plain_text_input",
+				"type": "multi_static_select",
 				"action_id": "topics_select",
 				"placeholder": {
 					"type": "plain_text",
-					"text": "Define custom topics"
-				}
+					"text": "Select topics"
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Product Development"
+						},
+						"value": "product"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Marketing"
+						},
+						"value": "marketing"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Sales"
+						},
+						"value": "sales"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Customer Support"
+						},
+						"value": "support"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Engineering"
+						},
+						"value": "engineering"
+					}
+				]
 			},
 			"label": {
 				"type": "plain_text",

@@ -1,6 +1,6 @@
 from objects import Database, DatabaseConfig
 from typing import Dict, Any
-import worker
+import utils.worker as worker
 import logistics
 import factory
 import logging

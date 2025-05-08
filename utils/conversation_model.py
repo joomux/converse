@@ -128,7 +128,15 @@ class Conversation:
     
     # Canvas getters and setters
     def set_canvas(self, canvas):
-        self._canvas = bool(canvas)
+        if canvas is None:
+            self._canvas = False
+        elif canvas == "yes":
+            self._canvas = True
+        elif canvas == "no":
+            self._canvas = False
+        else:
+            self._canvas = False
+        # self._canvas = bool(canvas)
         
     def get_canvas(self):
         return self._canvas

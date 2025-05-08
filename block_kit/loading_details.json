@@ -1,0 +1,66 @@
+{
+	"title": {
+		"type": "plain_text",
+		"text": "Building with AI",
+		"emoji": true
+	},
+	"type": "modal",
+	"close": {
+		"type": "plain_text",
+		"text": "Cancel",
+		"emoji": true
+	},
+	"blocks": [
+		{
+			"type": "image",
+			"image_url": "https://cdn.dribbble.com/userupload/23743704/file/original-0034aa5191749c11e4be1a9ba56ec51b.gif",
+			"alt_text": "loading..."
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Posts*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Canvas*"
+				},
+				{
+					"type": "plain_text",
+					"text": "%%posts%%",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "%%canvas%%",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Replies*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Now Processing*"
+				},
+				{
+					"type": "plain_text",
+					"text": "%%replies%%",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "%%current%%",
+					"emoji": true
+				}
+			]
+		}
+	]
+}

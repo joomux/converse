@@ -15,12 +15,18 @@ def ai_designer(ack: Ack, body, client: WebClient, logger: Logger):
     with open(view_path, 'r') as file:
         loading_modal = json.load(file)
     client.views_update(view_id=view_id, view=loading_modal)
+    # client.views_push(trigger_id=body["trigger_id"], view=loading_modal)
     # need to get the channel info then pass it over to an AI prompt to get parameters back
     
+    logger.info("AI DEISGNER")
     logger.debug(body)
 
     # test parameters
-    channel_name = "#proj-ai-designer" # get this from the private_metadata
+    # channel_name = "#proj-ai-designer" # get this from the private_metadata
+    channel_id = body["view"]["private_metadata"]
+    channel_info = client.conversations_info(channel=channel_id)
+    logger.info(f"CHANNEL INFO: {channel_info}")
+    channel_name = channel_info["channel"]["name"]
     channel_topic = body["view"]["state"]["values"]["channel_topic"]["channel_topic_input"]["value"] #"Figuring out how to design a Slack channel with AI"
     channel_description = body["view"]["state"]["values"]["channel_description"]["channel_description_input"]["value"] #"Conversations about using the internal DevXP AI LLM to build a set of parameters that can be used to design content for a Slack channel."
 
@@ -38,6 +44,9 @@ def ai_designer(ack: Ack, body, client: WebClient, logger: Logger):
     with open(view_path, 'r') as file:
         conversation_modal = json.load(file)
 
+
+    conversation_modal["private_metadata"] = channel_id
+
     
     for block in conversation_modal["blocks"]: 
         # do we have a matching param based on block_id?
@@ -52,10 +61,20 @@ def ai_designer(ack: Ack, body, client: WebClient, logger: Logger):
                     block["accessory"]["initial_option"] = get_option_from_value(block["accessory"]["options"], params[block["block_id"]])
             elif "element" in block:
                 if "plain_text_input" in block["element"]["type"]:
-                    block["element"]["initial_value"] = params[block["block_id"]]
+                    content = params[block["block_id"]]
+                    if isinstance(content, list):
+                        content = ", ".join(content)
+                    block["element"]["initial_value"] = content
                 pass
+        elif block.get("block_id") == "channel_topic":
+                block["element"]["placeholder"] = {"type": "plain_text", "text": channel_topic}
+                block["element"]["initial_value"] = channel_topic
+        elif block.get("block_id") == "channel_description":
+            block["element"]["placeholder"] = {"type": "plain_text", "text": channel_description}
+            block["element"]["initial_value"] = channel_description
         else:
             continue
+            
     
     # conversation_modal["blocks"] = new_blocks
     logger.debug("UPDATED MODAL")
