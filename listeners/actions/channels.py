@@ -27,7 +27,7 @@ def open_channel_creator(ack: Ack, body, client: WebClient, logger: Logger):
         for block in modal["blocks"]:
             if logger:
                 logger.debug(f"Checking block id {block.get('block_id', None)}")
-            if block.get("block_id", None) is "use_case_input" and config.get(block["block_id"], None) is not None:
+            if block.get("block_id", None) == "use_case_input" and config.get(block["block_id"], None) is not None:
                 if logger:
                     logger.debug(f"Setting value to {block.get('block_id', None)}")
                 block["element"]["initial_value"] = create_string
