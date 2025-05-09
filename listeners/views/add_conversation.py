@@ -455,7 +455,8 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
     db.update("history", {"query_time": query_time}, {"id": history_row["id"]})
 
     # log an entry to the analytics table
-    total_posts_sent = db.fetch_one("SELECT COUNT(*) AS total_posts_sent FROM messages WHERE history_id = %s", (history_row["id"],))["total_posts_sent"]
+    # total_posts_sent = db.fetch_one("SELECT COUNT(*) AS total_posts_sent FROM messages WHERE history_id = %s", (history_row["id"],))["total_posts_sent"]
+    total_posts_sent = data_counter["posts"] + data_counter["replies"]
     db.insert("analytics", {"user_id": current_user["id"], "messages": total_posts_sent})
 
     time_in_seconds = query_time/1000
