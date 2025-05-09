@@ -156,5 +156,5 @@ if __name__ == "__main__":
                 return "An error occurred during the OAuth process", 500
             
         logger.info("STARTING FLASK!")
-        port = int(os.environ.get("PORT", 3000))
-        flask_app.run(host="0.0.0.0", port=port)
+        # port = int(os.environ.get("PORT", 3000))
+        # flask_app.run(host="0.0.0.0", port=port)
