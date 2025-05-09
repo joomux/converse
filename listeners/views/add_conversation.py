@@ -11,39 +11,35 @@ from utils.database import Database, DatabaseConfig
 from datetime import timedelta
 
 def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
-    # ack()
     try:
         view_path = os.path.join("block_kit", "conversation_modal.json")
         with open(view_path, 'r') as file:
             conversation_modal = json.load(file)
         
         view_id = body["view"]["id"]
-        trigger_id = body["trigger_id"]
-        logger.info("BODY")
-        logger.info(body)
-        logger.info(f"VIEW ID: {view_id}")
-
-
         channel_id = body["view"]["state"]["values"]["add_conversation_channel_selector"]["conversation_select"]["selected_conversation"]
         channel_info = client.conversations_info(channel=channel_id)
-        logger.info(f"CHANNEL INFO: {channel_info}")
 
         conversation_modal["private_metadata"] = channel_id
 
+        # Update blocks with proper validation for empty values
         for block in conversation_modal["blocks"]:
             if block.get("block_id") == "channel_topic":
-                block["element"]["placeholder"] = {"type": "plain_text", "text": channel_info["channel"]["topic"]["value"]}
-                block["element"]["initial_value"] = channel_info["channel"]["topic"]["value"]
+                topic_value = channel_info["channel"]["topic"]["value"] or "No topic set"
+                block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
+                block["element"]["initial_value"] = topic_value
             if block.get("block_id") == "channel_description":
-                block["element"]["placeholder"] = {"type": "plain_text", "text": channel_info["channel"]["purpose"]["value"]}
-                block["element"]["initial_value"] = channel_info["channel"]["purpose"]["value"]
+                purpose_value = channel_info["channel"]["purpose"]["value"] or "No purpose set"
+                block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
+                block["element"]["initial_value"] = purpose_value
 
-        ack(response_action="update", view=conversation_modal)
-        # view = client.views_update(view_id=view_id, view=conversation_modal)
-        # logger.info(f"TRIGGER ID: {trigger_id}")
-        # view = client.views_push(trigger_id=trigger_id, view=conversation_modal)
+        # Use ack() with response_action instead of client.views_update
+        return ack(response_action="update", view=conversation_modal)
+
     except Exception as e:
-        logger.error(f"SINGLE_CHANNEL_FORM: {e}")
+        logger.error(f"Error in single_channel_form: {e}", exc_info=True)
+        # Still need to acknowledge even if there's an error
+        ack()
     
 def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logger):
     logger.info("TIME TO GENERATE THE CONVERSATION!")
