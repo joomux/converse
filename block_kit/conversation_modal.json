@@ -57,6 +57,7 @@
 		{
 			"type": "input",
 			"block_id":"channel_description",
+			"optional": true,
 			"element": {
 				"type": "plain_text_input",
 				"multiline": true,
