@@ -119,6 +119,33 @@ flask_app.config["SERVER_NAME"] = os.environ["SERVER_NAME"]
 flask_app.config["PREFERRED_URL_SCHEME"] = "https"
 handler = SlackRequestHandler(app)
 
+@flask_app.route("/slack/events", methods=["POST"])
+def slack_events():
+    return handler.handle(request)
+
+@flask_app.route("/slack/install", methods=["GET"])
+def install():
+    try:
+        bolt_resp = app.oauth_flow.handle_installation(request)
+        return Response(
+            response=bolt_resp.body, status=bolt_resp.status, headers=bolt_resp.headers
+        )
+    except Exception as e:
+        logging.error(f"Error handling installation: {e}")
+        return "An error occurred during installation", 500
+
+@flask_app.route("/slack/oauth_redirect", methods=["GET"])
+def oauth_redirect():
+    try:
+        logging.info("OAuth redirect started")
+        logging.info(f"Request args: {request.args}")
+        result = handler.handle(request)
+        logging.info(f"OAuth result: {result}")
+        return result
+    except Exception as e:
+        logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
+        return "An error occurred during the OAuth process", 500
+
 # Start Bolt app
 if __name__ == "__main__":
     
@@ -128,34 +155,6 @@ if __name__ == "__main__":
         SocketModeHandler(app, os.environ.get("SLACK_APP_TOKEN")).start()
     else:
         # HTTP mode (requires public endpoints)
-        
-        @flask_app.route("/slack/events", methods=["POST"])
-        def slack_events():
-            return handler.handle(request)
-
-        @flask_app.route("/slack/install", methods=["GET"])
-        def install():
-            try:
-                bolt_resp = app.oauth_flow.handle_installation(request)
-                return Response(
-                    response=bolt_resp.body, status=bolt_resp.status, headers=bolt_resp.headers
-                )
-            except Exception as e:
-                logging.error(f"Error handling installation: {e}")
-                return "An error occurred during installation", 500
-
-        @flask_app.route("/slack/oauth_redirect", methods=["GET"])
-        def oauth_redirect():
-            try:
-                logging.info("OAuth redirect started")
-                logging.info(f"Request args: {request.args}")
-                result = handler.handle(request)
-                logging.info(f"OAuth result: {result}")
-                return result
-            except Exception as e:
-                logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
-                return "An error occurred during the OAuth process", 500
-            
         logger.info("STARTING FLASK!")
-        # port = int(os.environ.get("PORT", 3000))
-        # flask_app.run(host="0.0.0.0", port=port)
+        port = int(os.environ.get("PORT", 3000))
+        flask_app.run(host="0.0.0.0", port=port)
