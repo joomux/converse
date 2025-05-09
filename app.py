@@ -11,7 +11,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_bolt.adapter.flask import SlackRequestHandler
 import sqlalchemy
 from sqlalchemy.engine import Engine
-from flask import Flask, request
+from flask import Flask, request, jsonify, Response
 
 from listeners import register_listeners
 
@@ -127,6 +127,29 @@ if __name__ == "__main__":
         @flask_app.route("/slack/events", methods=["POST"])
         def slack_events():
             return handler.handle(request)
+
+        @flask_app.route("/slack/install", methods=["GET"])
+        def install():
+            try:
+                bolt_resp = app.oauth_flow.handle_installation(request)
+                return Response(
+                    response=bolt_resp.body, status=bolt_resp.status, headers=bolt_resp.headers
+                )
+            except Exception as e:
+                logging.error(f"Error handling installation: {e}")
+                return "An error occurred during installation", 500
+
+        @flask_app.route("/slack/oauth_redirect", methods=["GET"])
+        def oauth_redirect():
+            try:
+                logging.info("OAuth redirect started")
+                logging.info(f"Request args: {request.args}")
+                result = handler.handle(request)
+                logging.info(f"OAuth result: {result}")
+                return result
+            except Exception as e:
+                logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
+                return "An error occurred during the OAuth process", 500
             
         port = int(os.environ.get("PORT", 3000))
         flask_app.run(host="0.0.0.0", port=port)
