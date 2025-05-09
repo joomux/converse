@@ -158,36 +158,33 @@ import json
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
-        # Test with a minimal valid view structure
-        view = {
-            "type": "home",
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "Welcome home!"
-                    }
-                }
-            ]
-        }
-
-        # Publish the view
-        response = client.views_publish(
+        # Call views.publish with the built-in client
+        client.views_publish(
+            # Use the user ID associated with the event
             user_id=event["user"],
-            view=view
+            # Home tabs must be enabled in your app configuration
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Welcome home, <@" + event["user"] + "> :house:*"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "Learn how home tabs can be more useful and interactive <https://docs.slack.dev/surfaces/app-home|*in the documentation*>."
+                        }
+                    }
+                ]
+            }
         )
-
-        if not response["ok"]:
-            logger.error(f"Failed to publish view: {response['error']}")
-            logger.error(f"View content: {json.dumps(view, indent=2)}")
-            return
-
-        logger.info(f"Home tab updated for user {event['user']}")
-
     except Exception as e:
-        logger.error(f"Error updating home tab: {str(e)}", exc_info=True)
-
+        logger.error(f"Error publishing home tab: {e}")
 
 # Start Bolt app
 if __name__ == "__main__":
