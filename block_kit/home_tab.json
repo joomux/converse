@@ -1,52 +1,196 @@
 {
-    "type": "home",
-    "blocks": [
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": "Build a Custom Demo",
-                "emoji": true
-            }
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "Define a custom demo with tailored messages, channels, canvases and more."
-            }
-        },
-        {
-            "type": "actions",
-            "elements": [
-                {
-                    "text": {
-                        "text": ":toolbox: Enter Builder Mode",
-                        "type": "plain_text",
-                        "emoji": true
-                    },
-                    "type": "button",
-                    "value": "enter_builder_mode",
-                    "action_id": "builder_step_one"
-                }
-            ]
-        },
-        {
+	"type": "home",
+	"blocks": [
+		{
+			"type": "image",
+			"image_url": "https://i.imgur.com/GSL8yiC.png",
+			"alt_text": "Coming Soon"
+		},
+		{
 			"type": "context",
 			"elements": [
 				{
-					"type": "plain_text",
-					"text": "Placeholder",
-					"emoji": true
+					"type": "mrkdwn",
+					"text": ":construction: *Features below are coming soon! This is just a preview.*"
 				}
 			]
 		},
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "​ "
-            }
-        }
-    ]
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Build a Custom Demo",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Create a custom Slack demo with tailored channels, messages, and more — all powered by AI."
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": ":toolbox: Enter Builder Mode",
+						"emoji": true
+					},
+					"value": "enter_builder_mode"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Demo Templates",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Skip the setup and start with a pre-built template for common demo use cases."
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "🔍 Browse Templates",
+						"emoji": true
+					},
+					"value": "browse_templates"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Saved Demos",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*_Example_ – Customer Hooli Project*"
+			},
+			"accessory": {
+				"type": "overflow",
+				"action_id": "overflow-action-hooli",
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Open",
+							"emoji": true
+						},
+						"value": "open_hooli"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Rename",
+							"emoji": true
+						},
+						"value": "rename_hooli"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Duplicate",
+							"emoji": true
+						},
+						"value": "duplicate_hooli"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Delete",
+							"emoji": true
+						},
+						"value": "delete_hooli"
+					}
+				]
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*_Example_ – New Hire Onboarding*"
+			},
+			"accessory": {
+				"type": "overflow",
+				"action_id": "overflow-action-onboarding",
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Open",
+							"emoji": true
+						},
+						"value": "open_onboarding"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Rename",
+							"emoji": true
+						},
+						"value": "rename_onboarding"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Duplicate",
+							"emoji": true
+						},
+						"value": "duplicate_onboarding"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Delete",
+							"emoji": true
+						},
+						"value": "delete_onboarding"
+					}
+				]
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "mrkdwn",
+					"text": "_Made by Jeremy Roberts and Andrew Nikolic • Questions or feedback? Visit #proj-slack-demo-generator_"
+				}
+			]
+		}
+	]
 }
