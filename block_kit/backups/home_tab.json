@@ -1,0 +1,52 @@
+{
+    "type": "home",
+    "blocks": [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Build a Custom Demo",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Define a custom demo with tailored messages, channels, canvases and more."
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "text": {
+                        "text": ":toolbox: Enter Builder Mode",
+                        "type": "plain_text",
+                        "emoji": true
+                    },
+                    "type": "button",
+                    "value": "enter_builder_mode",
+                    "action_id": "builder_step_one"
+                }
+            ]
+        },
+        {
+			"type": "context",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "Placeholder",
+					"emoji": true
+				}
+			]
+		},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "​ "
+            }
+        }
+    ]
+}
