@@ -12,13 +12,22 @@ from datetime import timedelta
 
 def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     try:
+        # Log the entire request for debugging
+        logger.info("SINGLE_CHANNEL_FORM RECEIVED PAYLOAD:")
+        logger.info(json.dumps(body))
+        
         view_path = os.path.join("block_kit", "conversation_modal.json")
         with open(view_path, 'r') as file:
             conversation_modal = json.load(file)
         
         view_id = body["view"]["id"]
+        logger.info(f"Using view_id: {view_id}")
+        
         channel_id = body["view"]["state"]["values"]["add_conversation_channel_selector"]["conversation_select"]["selected_conversation"]
+        logger.info(f"Selected channel_id: {channel_id}")
+        
         channel_info = client.conversations_info(channel=channel_id)
+        logger.info(f"CHANNEL INFO: {channel_info}")
 
         conversation_modal["private_metadata"] = channel_id
 
@@ -28,13 +37,65 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
                 topic_value = channel_info["channel"]["topic"]["value"] or "No topic set"
                 block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
                 block["element"]["initial_value"] = topic_value
+                logger.info(f"Set topic value: {topic_value}")
+                
             if block.get("block_id") == "channel_description":
                 purpose_value = channel_info["channel"]["purpose"]["value"] or "No purpose set"
                 block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
                 block["element"]["initial_value"] = purpose_value
+                logger.info(f"Set purpose value: {purpose_value}")
+            
+            # Set default values for required fields
+            if block.get("block_id") == "num_participants":
+                if "accessory" in block and "options" in block["accessory"]:
+                    # Default to first option if none is selected
+                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+                    logger.info(f"Set num_participants default: {block['accessory']['options'][0]['value']}")
+            
+            if block.get("block_id") == "num_posts":
+                if "accessory" in block and "options" in block["accessory"]:
+                    # Default to first option if none is selected
+                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+                    logger.info(f"Set num_posts default: {block['accessory']['options'][0]['value']}")
+            
+            if block.get("block_id") == "post_length":
+                if "accessory" in block and "options" in block["accessory"]:
+                    # Default to first option if none is selected
+                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+                    logger.info(f"Set post_length default: {block['accessory']['options'][0]['value']}")
+            
+            if block.get("block_id") == "tone":
+                if "accessory" in block and "options" in block["accessory"]:
+                    # Default to first option if none is selected
+                    block["accessory"]["initial_option"] = block["accessory"]["options"][2]
+                    logger.info(f"Set tone default: {block['accessory']['options'][0]['value']}")
+                    
+            if block.get("block_id") == "emoji_density":
+                if "accessory" in block and "options" in block["accessory"]:
+                    # Default to first option if none is selected
+                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+                    logger.info(f"Set emoji_density default: {block['accessory']['options'][0]['value']}")
+                    
+            if block.get("block_id") == "thread_replies":
+                if "accessory" in block and "options" in block["accessory"]:
+                    # Default to first option if none is selected
+                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+                    logger.info(f"Set thread_replies default: {block['accessory']['options'][0]['value']}")
+                    
+            if block.get("block_id") == "canvas":
+                if "accessory" in block and "options" in block["accessory"]:
+                    # Default to "No" for canvas
+                    block["accessory"]["initial_option"] = block["accessory"]["options"][1]  # "No" option
+                    logger.info(f"Set canvas default: {block['accessory']['options'][1]['value']}")
 
+        # Log the final modal we're sending
+        logger.info("SENDING MODAL:")
+        logger.info(json.dumps(conversation_modal))
+        
         # Use ack() with response_action instead of client.views_update
-        return ack(response_action="update", view=conversation_modal)
+        response = ack(response_action="update", view=conversation_modal)
+        logger.info(f"ACK response: {response}")
+        return response
 
     except Exception as e:
         logger.error(f"Error in single_channel_form: {e}", exc_info=True)
@@ -43,6 +104,55 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
     
 def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logger):
     logger.info("TIME TO GENERATE THE CONVERSATION!")
+    
+    # First validate all required fields are present
+    try:
+        state_values = view["state"]["values"]
+        
+        # Required fields to check
+        required_fields = [
+            {"block": "channel_topic", "action": "channel_topic_input"},
+            {"block": "channel_description", "action": "channel_description_input"},
+            {"block": "num_participants", "action": "do_nothing"},
+            {"block": "num_posts", "action": "do_nothing"},
+            {"block": "post_length", "action": "do_nothing"},
+            {"block": "tone", "action": "do_nothing"},
+            {"block": "emoji_density", "action": "do_nothing"},
+            {"block": "thread_replies", "action": "do_nothing"}
+        ]
+        
+        errors = {}
+        
+        for field in required_fields:
+            block_id = field["block"]
+            action_id = field["action"]
+            
+            if block_id not in state_values:
+                errors[block_id] = f"This field is required"
+                continue
+                
+            if action_id not in state_values[block_id]:
+                errors[block_id] = f"This field is required"
+                continue
+                
+            if action_id == "do_nothing":
+                # Static select fields
+                if "selected_option" not in state_values[block_id][action_id] or not state_values[block_id][action_id]["selected_option"]:
+                    errors[block_id] = "Please select an option"
+            else:
+                # Text input fields
+                if "value" not in state_values[block_id][action_id] or not state_values[block_id][action_id]["value"]:
+                    errors[block_id] = "This field cannot be empty"
+        
+        if errors:
+            # Return errors to the user
+            logger.error(f"Validation errors: {errors}")
+            return ack(response_action="errors", errors=errors)
+    
+    except Exception as e:
+        logger.error(f"Error validating conversation form: {e}", exc_info=True)
+    
+    # If validation passes, acknowledge and proceed with loading modal
     # open the loading model
     view_id = body["view"]["id"]
     view_path = os.path.join("block_kit", "loading.json")
