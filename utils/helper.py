@@ -3,7 +3,7 @@ import random
 import json
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.environ.get('LOGLEVEL', logging.DEBUG))
 logger = logging.getLogger(__name__)
 
 """

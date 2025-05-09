@@ -1,9 +1,10 @@
+import os
 from logging import Logger
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.environ.get('LOGLEVEL', logging.DEBUG))
 logger = logging.getLogger(__name__)
 
 def is_bot_in_channel(client: WebClient, channel_id: str):

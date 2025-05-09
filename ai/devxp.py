@@ -4,7 +4,7 @@ import json
 import random
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.environ.get('LOGLEVEL', logging.DEBUG))
 logger = logging.getLogger(__name__)
 
 API_BASE_URL = os.environ.get("AI_API")

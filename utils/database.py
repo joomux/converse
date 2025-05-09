@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 load_dotenv()  
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.environ.get('LOGLEVEL', logging.DEBUG))
 logger = logging.getLogger(__name__)
 
 class DatabaseConfig:

@@ -1,3 +1,4 @@
+import os
 from slack_bolt import App
 from slack_sdk.errors import SlackApiError
 import logging
@@ -5,7 +6,7 @@ import time
 from .database import Database, DatabaseConfig
 from typing import Dict, Any
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.environ.get('LOGLEVEL', logging.DEBUG))
 logger = logging.getLogger(__name__)
 
 db = Database(DatabaseConfig())
