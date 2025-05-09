@@ -113,6 +113,12 @@ register_listeners(app)
 def do_nothing(ack: Ack):
     ack()
 
+logger.info("Preparing flask")
+flask_app = Flask(__name__)
+flask_app.config["SERVER_NAME"] = os.environ["SERVER_NAME"]
+flask_app.config["PREFERRED_URL_SCHEME"] = "https"
+handler = SlackRequestHandler(app)
+
 # Start Bolt app
 if __name__ == "__main__":
     
@@ -122,11 +128,6 @@ if __name__ == "__main__":
         SocketModeHandler(app, os.environ.get("SLACK_APP_TOKEN")).start()
     else:
         # HTTP mode (requires public endpoints)
-        logger.info("Preparing flask")
-        flask_app = Flask(__name__)
-        flask_app.config["SERVER_NAME"] = os.environ["SERVER_NAME"]
-        flask_app.config["PREFERRED_URL_SCHEME"] = "https"
-        handler = SlackRequestHandler(app)
         
         @flask_app.route("/slack/events", methods=["POST"])
         def slack_events():
