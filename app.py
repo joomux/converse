@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 mode = os.environ.get("SLACK_APP_MODE", "socket").lower()
 
 if mode != "socket":
+    logger.info("NOT in socket mode! Let's go!")
     ######################################
     #
     # USE THIS FOR NON-SOCKET MODE!
@@ -101,6 +102,7 @@ if mode != "socket":
 
 else: # we're in socket mode!
     # Initialization
+    logger.info("IN socket mode! Let's go!")
     app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 # Register Listeners
@@ -116,9 +118,11 @@ if __name__ == "__main__":
     
     if mode == "socket":
         # Socket mode (no public endpoints needed)
+        logger.info("Starting socket mode handler!")
         SocketModeHandler(app, os.environ.get("SLACK_APP_TOKEN")).start()
     else:
         # HTTP mode (requires public endpoints)
+        logger.info("Preparing flask")
         flask_app = Flask(__name__)
         flask_app.config["SERVER_NAME"] = os.environ["SERVER_NAME"]
         flask_app.config["PREFERRED_URL_SCHEME"] = "https"
