@@ -124,22 +124,22 @@ handler = SlackRequestHandler(app)
 def slack_events():
     return handler.handle(request)
 
-# @flask_app.route("/slack/install", methods=["GET"])
-# def install():
-#     try:
-#         # Create a compatible request object for Bolt's OAuth flow
-#         bolt_request = BoltRequest(
-#             body={},
-#             query=request.args,  # Flask uses request.args for query parameters
-#             headers=request.headers,
-#         )
-#         bolt_resp = app.oauth_flow.handle_installation(bolt_request)
-#         return Response(
-#             response=bolt_resp.body, status=bolt_resp.status, headers=bolt_resp.headers
-#         )
-#     except Exception as e:
-#         logging.error(f"Error handling installation: {e}")
-#         return "An error occurred during installation", 500
+@flask_app.route("/slack/install", methods=["GET"])
+def install():
+    try:
+        # Create a compatible request object for Bolt's OAuth flow
+        bolt_request = BoltRequest(
+            body=request.get_data(as_text=True) or "",
+            query=request.args,
+            headers=request.headers,
+        )
+        bolt_resp = app.oauth_flow.handle_installation(bolt_request)
+        return Response(
+            response=bolt_resp.body, status=bolt_resp.status, headers=bolt_resp.headers
+        )
+    except Exception as e:
+        logging.error(f"Error handling installation: {e}")
+        return "An error occurred during installation", 500
 
 @flask_app.route("/slack/oauth_redirect", methods=["GET"])
 def oauth_redirect():
