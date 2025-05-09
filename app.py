@@ -152,7 +152,10 @@ def oauth_redirect():
     except Exception as e:
         logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
         return "An error occurred during the OAuth process", 500
-    
+
+from objects import Database, DatabaseConfig
+db = Database(DatabaseConfig())
+
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
