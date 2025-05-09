@@ -12,6 +12,7 @@ from slack_bolt.adapter.flask import SlackRequestHandler
 import sqlalchemy
 from sqlalchemy.engine import Engine
 from flask import Flask, request, jsonify, Response
+from slack_bolt.request import BoltRequest
 
 from listeners import register_listeners
 
@@ -126,7 +127,13 @@ def slack_events():
 @flask_app.route("/slack/install", methods=["GET"])
 def install():
     try:
-        bolt_resp = app.oauth_flow.handle_installation(request)
+        # Create a compatible request object for Bolt's OAuth flow
+        bolt_request = BoltRequest(
+            body={},
+            query=request.args,  # Flask uses request.args for query parameters
+            headers=request.headers,
+        )
+        bolt_resp = app.oauth_flow.handle_installation(bolt_request)
         return Response(
             response=bolt_resp.body, status=bolt_resp.status, headers=bolt_resp.headers
         )
