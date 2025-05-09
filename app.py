@@ -158,16 +158,31 @@ import json
 @app.event("app_home_opened")
 def update_home_tab(client, event, logger):
     try:
-        # Load the home tab view JSON from the file
-        file_path = os.path.join("block_kit", "home_tab.json")
-        with open(file_path, "r") as file:
-            view = json.load(file)
-
+        # Test with minimal valid view structure first
+        view = {
+            "type": "home",
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Welcome home!"
+                    }
+                }
+            ]
+        }
+            
         # Publish the view
-        client.views_publish(
+        response = client.views_publish(
             user_id=event["user"],
             view=view
         )
+        
+        if not response["ok"]:
+            logger.error(f"Failed to publish view: {response['error']}")
+            logger.error(f"View content: {json.dumps(view, indent=2)}")
+            return
+            
         logger.info(f"Home tab updated for user {event['user']}")
 
     except Exception as e:
