@@ -14,8 +14,10 @@ def app_home_opened_callback(client: WebClient, event: dict, logger: Logger):
     try:
         # Fetch builder options from the database for this user
         user_id = event["user"]
-        # Fetch team ID
-        app_installed_team_id = event["view"]["app_installed_team_id"]
+        
+        # Get the team ID from the client's auth test
+        auth_test = client.auth_test()
+        app_installed_team_id = auth_test["team_id"]
         
         query = "SELECT mode FROM user_builder_selections WHERE user_id = %s AND app_installed_team_id = %s"
         result = db.fetch_one(query, (user_id, app_installed_team_id))
