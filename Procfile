@@ -1,0 +1,1 @@
+web: gunicorn --timeout 120 app:flask_app

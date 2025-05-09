@@ -6,7 +6,7 @@ import factory
 import logging
 import random
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.environ.get('LOGLEVEL', 'DEBUG').upper())
 logger = logging.getLogger(__name__)
 
 db = Database(DatabaseConfig())
