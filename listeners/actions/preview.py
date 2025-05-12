@@ -28,7 +28,7 @@ def app_home_popup(ack: Ack, body, client: WebClient, logger: Logger):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*:horse: Whoa... slod down a second*"
+                    "text": "*:horse: Whoa... slow down a second*"
                 }
             },
             {
