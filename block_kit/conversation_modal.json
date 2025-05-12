@@ -96,6 +96,13 @@
 					"text": "Yes/No",
 					"emoji": true
 				},
+				"initial_option": {
+					"text": {
+						"type": "plain_text",
+						"text": "No"
+					},
+					"value": "no"
+				},
 				"options": [
 					{
 						"text": {
@@ -191,6 +198,14 @@
 					"text": "Select a range",
 					"emoji": true
 				},
+				"initial_option": {
+					"text": {
+						"type": "plain_text",
+						"text": "2-3",
+						"emoji": true
+					},
+					"value": "2-3"
+				},
 				"options": [
 					{
 						"text": {
@@ -233,6 +248,14 @@
 					"type": "plain_text",
 					"text": "Select a range",
 					"emoji": true
+				},
+				"initial_option": {
+					"text": {
+						"type": "plain_text",
+						"text": "5-10",
+						"emoji": true
+					},
+					"value": "5-10"
 				},
 				"options": [
 					{
@@ -285,6 +308,14 @@
 					"text": "Select an option",
 					"emoji": true
 				},
+				"initial_option": {
+					"text": {
+						"type": "plain_text",
+						"text": "Short (1-2 sentences)",
+						"emoji": true
+					},
+					"value": "short"
+				},
 				"options": [
 					{
 						"text": {
@@ -327,6 +358,13 @@
 					"type": "plain_text",
 					"text": "Select a range",
 					"emoji": true
+				},
+				"initial_option": {
+					"text": {
+						"type": "plain_text",
+						"text": "0-2 replies"
+					},
+					"value": "0-2"
 				},
 				"options": [
 					{
@@ -374,6 +412,13 @@
 					"type": "plain_text",
 					"text": "Select an option",
 					"emoji": true
+				},
+				"initial_option": {
+					"text": {
+						"type": "plain_text",
+						"text": "Professional"
+					},
+					"value": "professional"
 				},
 				"options": [
 					{
@@ -435,6 +480,13 @@
 					"type": "plain_text",
 					"text": "Select an option",
 					"emoji": true
+				},
+				"initial_option": {
+					"text": {
+						"type": "plain_text",
+						"text": "Few"
+					},
+					"value": "few"
 				},
 				"options": [
 					{

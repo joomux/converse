@@ -32,61 +32,61 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
         conversation_modal["private_metadata"] = channel_id
 
         # Update blocks with proper validation for empty values
-        for block in conversation_modal["blocks"]:
-            if block.get("block_id") == "channel_topic":
-                topic_value = channel_info["channel"]["topic"]["value"] or "No topic set"
-                block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
-                block["element"]["initial_value"] = topic_value
-                logger.info(f"Set topic value: {topic_value}")
+        # for block in conversation_modal["blocks"]:
+        #     if block.get("block_id") == "channel_topic":
+        #         topic_value = channel_info["channel"]["topic"]["value"] or "No topic set"
+        #         block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
+        #         block["element"]["initial_value"] = topic_value
+        #         logger.info(f"Set topic value: {topic_value}")
                 
-            if block.get("block_id") == "channel_description":
-                purpose_value = channel_info["channel"]["purpose"]["value"] or "No purpose set"
-                block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
-                block["element"]["initial_value"] = purpose_value
-                logger.info(f"Set purpose value: {purpose_value}")
+        #     if block.get("block_id") == "channel_description":
+        #         purpose_value = channel_info["channel"]["purpose"]["value"] or "No purpose set"
+        #         block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
+        #         block["element"]["initial_value"] = purpose_value
+        #         logger.info(f"Set purpose value: {purpose_value}")
             
-            # Set default values for required fields
-            if block.get("block_id") == "num_participants":
-                if "accessory" in block and "options" in block["accessory"]:
-                    # Default to first option if none is selected
-                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-                    logger.info(f"Set num_participants default: {block['accessory']['options'][0]['value']}")
+        #     # Set default values for required fields
+        #     if block.get("block_id") == "num_participants":
+        #         if "accessory" in block and "options" in block["accessory"]:
+        #             # Default to first option if none is selected
+        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+        #             logger.info(f"Set num_participants default: {block['accessory']['options'][0]['value']}")
             
-            if block.get("block_id") == "num_posts":
-                if "accessory" in block and "options" in block["accessory"]:
-                    # Default to first option if none is selected
-                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-                    logger.info(f"Set num_posts default: {block['accessory']['options'][0]['value']}")
+        #     if block.get("block_id") == "num_posts":
+        #         if "accessory" in block and "options" in block["accessory"]:
+        #             # Default to first option if none is selected
+        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+        #             logger.info(f"Set num_posts default: {block['accessory']['options'][0]['value']}")
             
-            if block.get("block_id") == "post_length":
-                if "accessory" in block and "options" in block["accessory"]:
-                    # Default to first option if none is selected
-                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-                    logger.info(f"Set post_length default: {block['accessory']['options'][0]['value']}")
+        #     if block.get("block_id") == "post_length":
+        #         if "accessory" in block and "options" in block["accessory"]:
+        #             # Default to first option if none is selected
+        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+        #             logger.info(f"Set post_length default: {block['accessory']['options'][0]['value']}")
             
-            if block.get("block_id") == "tone":
-                if "accessory" in block and "options" in block["accessory"]:
-                    # Default to first option if none is selected
-                    block["accessory"]["initial_option"] = block["accessory"]["options"][2]
-                    logger.info(f"Set tone default: {block['accessory']['options'][0]['value']}")
+        #     if block.get("block_id") == "tone":
+        #         if "accessory" in block and "options" in block["accessory"]:
+        #             # Default to first option if none is selected
+        #             block["accessory"]["initial_option"] = block["accessory"]["options"][2]
+        #             logger.info(f"Set tone default: {block['accessory']['options'][0]['value']}")
                     
-            if block.get("block_id") == "emoji_density":
-                if "accessory" in block and "options" in block["accessory"]:
-                    # Default to first option if none is selected
-                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-                    logger.info(f"Set emoji_density default: {block['accessory']['options'][0]['value']}")
+        #     if block.get("block_id") == "emoji_density":
+        #         if "accessory" in block and "options" in block["accessory"]:
+        #             # Default to first option if none is selected
+        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+        #             logger.info(f"Set emoji_density default: {block['accessory']['options'][0]['value']}")
                     
-            if block.get("block_id") == "thread_replies":
-                if "accessory" in block and "options" in block["accessory"]:
-                    # Default to first option if none is selected
-                    block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-                    logger.info(f"Set thread_replies default: {block['accessory']['options'][0]['value']}")
+        #     if block.get("block_id") == "thread_replies":
+        #         if "accessory" in block and "options" in block["accessory"]:
+        #             # Default to first option if none is selected
+        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
+        #             logger.info(f"Set thread_replies default: {block['accessory']['options'][0]['value']}")
                     
-            if block.get("block_id") == "canvas":
-                if "accessory" in block and "options" in block["accessory"]:
-                    # Default to "No" for canvas
-                    block["accessory"]["initial_option"] = block["accessory"]["options"][1]  # "No" option
-                    logger.info(f"Set canvas default: {block['accessory']['options'][1]['value']}")
+        #     if block.get("block_id") == "canvas":
+        #         if "accessory" in block and "options" in block["accessory"]:
+        #             # Default to "No" for canvas
+        #             block["accessory"]["initial_option"] = block["accessory"]["options"][1]  # "No" option
+        #             logger.info(f"Set canvas default: {block['accessory']['options'][1]['value']}")
 
         # Log the final modal we're sending
         logger.info("SENDING MODAL:")
