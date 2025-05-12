@@ -9,7 +9,7 @@ from slack_sdk.oauth.installation_store.sqlalchemy import SQLAlchemyInstallation
 from slack_sdk.oauth.state_store.sqlalchemy import SQLAlchemyOAuthStateStore
 import sqlalchemy
 from sqlalchemy.engine import Engine
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template
 from slack_bolt.request import BoltRequest
 
 from listeners import register_listeners
@@ -152,10 +152,10 @@ def oauth_redirect():
         logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
         return "An error occurred during the OAuth process", 500
 
-@flask_app.route("/")
 @flask_app.route("/index.html")
-def index():
-    return flask_app.send_static_file("index.html")
+@flask_app.route("/")
+def landing():
+    return render_template("index.html")
 
 # Start Bolt app
 if __name__ == "__main__":
