@@ -43,7 +43,7 @@
 						"text": ":toolbox: Enter Builder Mode",
 						"emoji": true
 					},
-					"action_id": "app_home_popup"
+					"action_id": "enter_builder_mode"
 				}
 			]
 		},
@@ -75,7 +75,7 @@
 						"text": "🔍 Browse Templates",
 						"emoji": true
 					},
-					"action_id": "app_home_popup"
+					"action_id": "enter_builder_mode"
 				}
 			]
 		},
@@ -98,7 +98,7 @@
 			},
 			"accessory": {
 				"type": "overflow",
-				"action_id": "app_home_popup",
+				"action_id": "enter_builder_mode",
 				"options": [
 					{
 						"text": {
@@ -139,7 +139,7 @@
 			},
 			"accessory": {
 				"type": "overflow",
-				"action_id": "app_home_popup",
+				"action_id": "enter_builder_mode",
 				"options": [
 					{
 						"text": {
@@ -147,7 +147,7 @@
 							"text": "Open",
 							"emoji": true
 						},
-						"value": "open_onboarding"
+						"action_id": "enter_builder_mode"
 					},
 					{
 						"text": {
@@ -155,7 +155,7 @@
 							"text": "Rename",
 							"emoji": true
 						},
-						"value": "rename_onboarding"
+						"action_id": "enter_builder_mode"
 					},
 					{
 						"text": {
@@ -163,7 +163,7 @@
 							"text": "Duplicate",
 							"emoji": true
 						},
-						"value": "duplicate_onboarding"
+						"action_id": "enter_builder_mode"
 					},
 					{
 						"text": {
@@ -171,7 +171,7 @@
 							"text": "Delete",
 							"emoji": true
 						},
-						"value": "delete_onboarding"
+						"action_id": "enter_builder_mode"
 					}
 				]
 			}
