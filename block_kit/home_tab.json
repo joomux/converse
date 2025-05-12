@@ -75,7 +75,7 @@
 						"text": "🔍 Browse Templates",
 						"emoji": true
 					},
-					"value": "browse_templates"
+					"action_id": "browse_templates_button"
 				}
 			]
 		},

@@ -3,7 +3,7 @@ from .builder import handle_enter_builder_mode, save_builder_config, save_exit_b
 from .channels import open_channel_creator, open_channel_selector
 from .ai_designer import ai_designer
 from .conversation import channel_designer
-
+from .templates import browse_templates_button
 
 def register(app: App):
     app.action('builder_step_one')(builder_step_one)
@@ -18,3 +18,4 @@ def register(app: App):
     app.action("customer_name_update")(basic_update)
     app.action("clear")(save_exit_builder_mode)
     app.action("builder_step_two")(builder_step_two)
+    app.action("browse_templates_button")(browse_templates_button)
