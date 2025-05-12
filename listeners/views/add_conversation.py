@@ -32,18 +32,20 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
         conversation_modal["private_metadata"] = channel_id
 
         # Update blocks with proper validation for empty values
-        # for block in conversation_modal["blocks"]:
-        #     if block.get("block_id") == "channel_topic":
-        #         topic_value = channel_info["channel"]["topic"]["value"] or "No topic set"
-        #         block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
-        #         block["element"]["initial_value"] = topic_value
-        #         logger.info(f"Set topic value: {topic_value}")
+        for block in conversation_modal["blocks"]:
+            if block.get("block_id") == "channel_topic":
+                topic_value = channel_info["channel"]["topic"]["value"] or ""
+                if topic_value:
+                    block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
+                    block["element"]["initial_value"] = topic_value
+                    logger.info(f"Set topic value: {topic_value}")
                 
-        #     if block.get("block_id") == "channel_description":
-        #         purpose_value = channel_info["channel"]["purpose"]["value"] or "No purpose set"
-        #         block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
-        #         block["element"]["initial_value"] = purpose_value
-        #         logger.info(f"Set purpose value: {purpose_value}")
+            if block.get("block_id") == "channel_description":
+                purpose_value = channel_info["channel"]["purpose"]["value"] or ""
+                if purpose_value:
+                    block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
+                    block["element"]["initial_value"] = purpose_value
+                    logger.info(f"Set purpose value: {purpose_value}")
             
         #     # Set default values for required fields
         #     if block.get("block_id") == "num_participants":
