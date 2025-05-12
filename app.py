@@ -152,6 +152,11 @@ def oauth_redirect():
         logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
         return "An error occurred during the OAuth process", 500
 
+@flask_app.route("/")
+@flask_app.route("/index.html")
+def index():
+    return flask_app.send_static_file("index.html")
+
 # Start Bolt app
 if __name__ == "__main__":
     
