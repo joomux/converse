@@ -8,7 +8,7 @@ from slack_bolt import Say
 db = Database(DatabaseConfig())
 
 def extend_thread(client, member_id, channel_id, message_ts, say: Say, logger: Logger):
-    current_user = user.get_user(client, member_id, logger=logger)
+    current_user = user.get_user(client=client, member_id=member_id, logger=logger)
 
     # Prep the message history log
     history_entry = {

@@ -30,7 +30,7 @@ def get_user(client, member_id: str, logger: Logger):
         }
 
         user = db.insert("users", user)
-        return get_user(client, member_id)
+        return get_user(client, member_id, logger=logger)
     
 
 def get_user_info(client, member_id: str, logger: Logger):
