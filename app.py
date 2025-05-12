@@ -7,8 +7,6 @@ from slack_bolt.oauth.oauth_settings import OAuthSettings
 from slack_bolt.oauth.oauth_flow import OAuthFlow
 from slack_sdk.oauth.installation_store.sqlalchemy import SQLAlchemyInstallationStore
 from slack_sdk.oauth.state_store.sqlalchemy import SQLAlchemyOAuthStateStore
-from slack_bolt.adapter.socket_mode import SocketModeHandler
-from slack_bolt.adapter.flask import SlackRequestHandler
 import sqlalchemy
 from sqlalchemy.engine import Engine
 from flask import Flask, request, jsonify, Response
@@ -116,8 +114,9 @@ def do_nothing(ack: Ack):
 
 logger.info("Preparing flask")
 flask_app = Flask(__name__)
-flask_app.config["SERVER_NAME"] = os.environ["SERVER_NAME"]
-flask_app.config["PREFERRED_URL_SCHEME"] = "https"
+if mode != "socket":
+    flask_app.config["SERVER_NAME"] = os.environ["SERVER_NAME"]
+    flask_app.config["PREFERRED_URL_SCHEME"] = "https"
 handler = SlackRequestHandler(app)
 
 @flask_app.route("/slack/events", methods=["POST"])
