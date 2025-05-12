@@ -65,11 +65,10 @@ def ai_designer(ack: Ack, body, client: WebClient, logger: Logger):
                     if isinstance(content, list):
                         content = ", ".join(content)
                     block["element"]["initial_value"] = content
-                pass
-        elif block.get("block_id") == "channel_topic":
+        elif block.get("block_id") == "channel_topic" and channel_topic is not None:
                 block["element"]["placeholder"] = {"type": "plain_text", "text": channel_topic}
                 block["element"]["initial_value"] = channel_topic
-        elif block.get("block_id") == "channel_description":
+        elif block.get("block_id") == "channel_description" and channel_description is not None:
             block["element"]["placeholder"] = {"type": "plain_text", "text": channel_description}
             block["element"]["initial_value"] = channel_description
         else:
