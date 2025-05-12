@@ -43,7 +43,7 @@
 						"text": ":toolbox: Enter Builder Mode",
 						"emoji": true
 					},
-					"action_id": "enter_builder_mode_button"
+					"action_id": "app_home_popup"
 				}
 			]
 		},
@@ -75,7 +75,7 @@
 						"text": "🔍 Browse Templates",
 						"emoji": true
 					},
-					"action_id": "do_nothing"
+					"action_id": "app_home_popup"
 				}
 			]
 		},
@@ -98,39 +98,35 @@
 			},
 			"accessory": {
 				"type": "overflow",
-				"action_id": "overflow-action-hooli",
+				"action_id": "app_home_popup",
 				"options": [
 					{
 						"text": {
 							"type": "plain_text",
 							"text": "Open",
 							"emoji": true
-						},
-						"action_id": "do_nothing"
+						}
 					},
 					{
 						"text": {
 							"type": "plain_text",
 							"text": "Rename",
 							"emoji": true
-						},
-						"action_id": "do_nothing"
+						}
 					},
 					{
 						"text": {
 							"type": "plain_text",
 							"text": "Duplicate",
 							"emoji": true
-						},
-						"action_id": "do_nothing"
+						}
 					},
 					{
 						"text": {
 							"type": "plain_text",
 							"text": "Delete",
 							"emoji": true
-						},
-						"action_id": "do_nothing"
+						}
 					}
 				]
 			}
@@ -143,7 +139,7 @@
 			},
 			"accessory": {
 				"type": "overflow",
-				"action_id": "overflow-action-onboarding",
+				"action_id": "app_home_popup",
 				"options": [
 					{
 						"text": {
@@ -188,7 +184,7 @@
 			"elements": [
 				{
 					"type": "mrkdwn",
-					"text": "_Made by Jeremy Roberts and Andrew Nikolic • Questions or feedback? Visit #proj-slack-demo-generator_"
+					"text": "_Made by Jeremy Roberts and Andrew Nikolic • Questions or feedback? Visit <https://salesforce.enterprise.slack.com/archives/C078C6K0S9H|#proj-slack-demo-generator>_"
 				}
 			]
 		}
