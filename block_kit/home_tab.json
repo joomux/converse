@@ -43,7 +43,7 @@
 						"text": ":toolbox: Enter Builder Mode",
 						"emoji": true
 					},
-					"value": "enter_builder_mode_button"
+					"action_id": "enter_builder_mode_button"
 				}
 			]
 		},
