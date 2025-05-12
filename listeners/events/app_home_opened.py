@@ -86,25 +86,7 @@ def app_home_opened_callback(client: WebClient, event: dict, logger: Logger):
             # Publish the updated view to the Slack app home
             client.views_publish(
                 user_id=event["user"],  # User ID from the event
-                view={
-                        "type": "home",
-                        "blocks": [
-                            {
-                                "type": "section",
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": "*Welcome home, <@" + event["user"] + "> :house:*"
-                                }
-                            },
-                            {
-                                "type": "section",
-                                "text": {
-                                "type": "mrkdwn",
-                                "text": "Learn how home tabs can be more useful and interactive <https://docs.slack.dev/surfaces/app-home|*in the documentation*>."
-                                }
-                            }
-                        ]
-                    }
+                view=view
             )
             
             # Log the successful update
