@@ -75,7 +75,7 @@
 						"text": "🔍 Browse Templates",
 						"emoji": true
 					},
-					"action_id": "browse_templates_button"
+					"action_id": "do_nothing"
 				}
 			]
 		},
@@ -106,7 +106,7 @@
 							"text": "Open",
 							"emoji": true
 						},
-						"value": "open_hooli"
+						"action_id": "do_nothing"
 					},
 					{
 						"text": {
@@ -114,7 +114,7 @@
 							"text": "Rename",
 							"emoji": true
 						},
-						"value": "rename_hooli"
+						"action_id": "do_nothing"
 					},
 					{
 						"text": {
@@ -122,7 +122,7 @@
 							"text": "Duplicate",
 							"emoji": true
 						},
-						"value": "duplicate_hooli"
+						"action_id": "do_nothing"
 					},
 					{
 						"text": {
@@ -130,7 +130,7 @@
 							"text": "Delete",
 							"emoji": true
 						},
-						"value": "delete_hooli"
+						"action_id": "do_nothing"
 					}
 				]
 			}
