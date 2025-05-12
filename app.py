@@ -153,39 +153,6 @@ def oauth_redirect():
         logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
         return "An error occurred during the OAuth process", 500
 
-import json
-
-@app.event("app_home_opened")
-def update_home_tab(client, event, logger):
-    try:
-        # Call views.publish with the built-in client
-        client.views_publish(
-            # Use the user ID associated with the event
-            user_id=event["user"],
-            # Home tabs must be enabled in your app configuration
-            view={
-                "type": "home",
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "*Welcome home, <@" + event["user"] + "> :house:*"
-                        }
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                          "type": "mrkdwn",
-                          "text": "Learn how home tabs can be more useful and interactive <https://docs.slack.dev/surfaces/app-home|*in the documentation*>."
-                        }
-                    }
-                ]
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error publishing home tab: {e}")
-
 # Start Bolt app
 if __name__ == "__main__":
     

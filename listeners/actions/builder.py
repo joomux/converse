@@ -89,11 +89,11 @@ def basic_update(ack: Ack, body, client: WebClient, mode, logger: Logger):
 
 def handle_enter_builder_mode(ack: Ack, body, client: WebClient, mode, logger: Logger):
     ack()
-    try:
-        # Extract app_installed_team_id
-        app_installed_team_id = body["view"].get("app_installed_team_id")
+    # try:
+    #     # Extract app_installed_team_id
+    #     app_installed_team_id = body["view"].get("app_installed_team_id")
 
-        user_id = body["user"]["id"]
+    #     user_id = body["user"]["id"]
 
         # query = text("""
         #     UPDATE user_builder_selections 
@@ -109,16 +109,16 @@ def handle_enter_builder_mode(ack: Ack, body, client: WebClient, mode, logger: L
         #         "last_updated": datetime.now(timezone.utc)
         #     })
         
-        db.update(
-            "user_builder_selections", 
-            {"mode": 'builder', "last_updated": datetime.now(timezone.utc)},
-            {"user_id": user_id, "app_installed_team_id": app_installed_team_id})
-        logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
+        # db.update(
+        #     "user_builder_selections", 
+        #     {"mode": 'builder', "last_updated": datetime.now(timezone.utc)},
+        #     {"user_id": user_id, "app_installed_team_id": app_installed_team_id})
+        # logger.debug(f"Successfully updated mode to {mode} for user_id {user_id}")
         
         # Update the App Home
-        update_app_home_to_builder_mode(client, body["user"]["id"], app_installed_team_id, logger=logger)
-    except Exception as e:
-        logger.error(f"Error updating App Home to builder mode: {e}")
+    #     update_app_home_to_builder_mode(client, body["user"]["id"], app_installed_team_id, logger=logger)
+    # except Exception as e:
+    #     logger.error(f"Error updating App Home to builder mode: {e}")
 
 
 def update_app_home_to_builder_mode(client, user_id, app_installed_team_id, logger: Logger):
