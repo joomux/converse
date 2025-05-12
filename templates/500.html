@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - System Overload | Converse</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            --secondary-gradient: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+            --error-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .error-container {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            padding: 2rem;
+        }
+
+        .error-code {
+            font-size: 12rem;
+            font-weight: 800;
+            background: var(--error-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1;
+            margin-bottom: 1rem;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+
+        .error-code::before {
+            content: '500';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--error-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: blur(8px);
+            opacity: 0.5;
+            animation: flicker 0.3s infinite;
+        }
+
+        .error-message {
+            font-size: 1.5rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .home-button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #fff;
+            background: var(--error-gradient);
+            border-radius: 12px;
+            text-decoration: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .home-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shine 3s infinite;
+        }
+
+        .home-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .circuit-board {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.1;
+        }
+
+        .circuit-line {
+            position: absolute;
+            background: var(--error-gradient);
+            animation: circuit-pulse 2s infinite;
+        }
+
+        .circuit-node {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: node-pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+        }
+
+        @keyframes flicker {
+            0%, 100% {
+                opacity: 0.5;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes shine {
+            0% {
+                left: -100%;
+            }
+            20% {
+                left: 100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+        @keyframes circuit-pulse {
+            0%, 100% {
+                opacity: 0.1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        @keyframes node-pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 5px #ef4444;
+            }
+            50% {
+                transform: scale(1.5);
+                box-shadow: 0 0 20px #ef4444;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 8rem;
+            }
+            
+            .error-message {
+                font-size: 1.25rem;
+            }
+            
+            .home-button {
+                padding: 0.875rem 1.75rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="circuit-board" id="circuitBoard"></div>
+    <div class="error-container">
+        <div class="error-code">500</div>
+        <p class="error-message">System overload detected! Our AI is taking a quick coffee break to cool its processors. We'll be back online faster than you can say "reboot"!</p>
+        <a href="/" class="home-button">Restart System →</a>
+    </div>
+
+    <script>
+        function createCircuitBoard() {
+            const container = document.getElementById('circuitBoard');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // Create circuit lines
+            for (let i = 0; i < 20; i++) {
+                const line = document.createElement('div');
+                line.className = 'circuit-line';
+                
+                // Random position and size
+                const isHorizontal = Math.random() > 0.5;
+                const length = Math.random() * 200 + 100;
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                
+                line.style.width = isHorizontal ? `${length}px` : '2px';
+                line.style.height = isHorizontal ? '2px' : `${length}px`;
+                line.style.left = `${x}px`;
+                line.style.top = `${y}px`;
+                line.style.animationDelay = `${Math.random() * 2}s`;
+                
+                container.appendChild(line);
+                
+                // Add nodes at the ends
+                const node1 = document.createElement('div');
+                node1.className = 'circuit-node';
+                node1.style.left = `${x}px`;
+                node1.style.top = `${y}px`;
+                node1.style.animationDelay = `${Math.random() * 2}s`;
+                container.appendChild(node1);
+                
+                const node2 = document.createElement('div');
+                node2.className = 'circuit-node';
+                node2.style.left = isHorizontal ? `${x + length}px` : `${x}px`;
+                node2.style.top = isHorizontal ? `${y}px` : `${y + length}px`;
+                node2.style.animationDelay = `${Math.random() * 2}s`;
+                container.appendChild(node2);
+            }
+        }
+
+        // Initialize circuit board
+        createCircuitBoard();
+
+        // Update circuit board on window resize
+        window.addEventListener('resize', () => {
+            const container = document.getElementById('circuitBoard');
+            container.innerHTML = '';
+            createCircuitBoard();
+        });
+    </script>
+</body>
+</html>
