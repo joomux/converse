@@ -1,5 +1,5 @@
 from logging import Logger
-from utils import user, channel as channel_utility
+from utils import user, message as message_utility, channel as channel_utility
 from utils.database import Database, DatabaseConfig
 from ai import devxp
 import random
@@ -93,52 +93,54 @@ def extend_thread(client, member_id, channel_id, message_ts, say: Say, logger: L
             "avatar": author_full_info["user"]["profile"].get('image_192', '')
         }
         try:
-            # reply_result = logistics.send_message(
-            #     client=client,
-            #     selected_channel=channel_id,
-            #     post=reply_post,
-            #     participant=author,
-            #     thread_ts=main_ts,
-            #     history_id=history_row["id"]
-            # )
-
-            reply_result = say(
-                channel=channel_id,
+            reply_result = message_utility.send_message(
+                client=client,
+                selected_channel=channel_id,
+                post=reply_post,
+                participant=author,
                 thread_ts=main_ts,
-                text=reply_post["message"],
-                username=author["real_name"],
-                icon_url=author["avatar"],
-                metadata={
-                    "event_type": "converse_reply_posted",
-                    "event_payload": {
-                        "actor_id": author["id"],
-                        "actor_name": author["real_name"],
-                        "avatar": author["avatar"]
-                    }
-                }
+                history_id=history_row["id"]
             )
 
+            # reply_result = say(
+            #     channel=channel_id,
+            #     thread_ts=main_ts,
+            #     text=reply_post["message"],
+            #     username=author["real_name"],
+            #     icon_url=author["avatar"],
+            #     metadata={
+            #         "event_type": "converse_reply_posted",
+            #         "event_payload": {
+            #             "actor_id": author["id"],
+            #             "actor_name": author["real_name"],
+            #             "avatar": author["avatar"]
+            #         }
+            #     }
+            # )
+
+            if reply_result["ok"]: pass
+
             if "reacjis" in reply:
-                # logistics.send_reacjis(
-                #     client=client,
-                #     channel_id=channel_id,
-                #     message_ts=reply_result["ts"],
-                #     reacji=reply["reacjis"]
-                # )
-                reacji = reply["reacjis"]
-                if not isinstance(reacji, list):
-                    reacji = [reacji]
+                message_utility.send_reacjis(
+                    client=client,
+                    channel_id=channel_id,
+                    message_ts=reply_result["ts"],
+                    reacji=reply["reacjis"]
+                )
+                # reacji = reply["reacjis"]
+                # if not isinstance(reacji, list):
+                #     reacji = [reacji]
                 
-                for r in reacji:
-                    try:
-                        client.reactions_add(
-                            channel=channel_id,
-                            timestamp=reply_result["ts"],
-                            name=r.strip(':')
-                        )
-                    except Exception as e:
-                        logger.error(f"Error adding reaction {reacji} to post {reply_result['ts']}: {e}")
-                        continue
+                # for r in reacji:
+                #     try:
+                #         client.reactions_add(
+                #             channel=channel_id,
+                #             timestamp=reply_result["ts"],
+                #             name=r.strip(':')
+                #         )
+                #     except Exception as e:
+                #         logger.error(f"Error adding reaction {reacji} to post {reply_result['ts']}: {e}")
+                #         continue
         except Exception as e:
             logger.error(f"Error sending reply: {e}")
 
