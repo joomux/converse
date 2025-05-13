@@ -23,20 +23,18 @@ def extend_thread_callback(ack: Ack, shortcut: dict, client: WebClient, say: Say
             channel_id=channel_id
         )
 
-        if not channel.is_bot_in_channel(
-            client=client,
-            channel_id=channel_id
-        ) and not channel_info["is_private"]:
-            channel.add_bot_to_channel(
-                client=client,
-                channel_id=channel_id
-            )
-        else:
-            # unable to add bot to channel!
-            error = f"Unable to add Converse to <#{channel_id}>. If this is a private channel, please manually add Converse then try again."
-            say(error)
-            logger.error(error)
-            raise
+        if not channel.is_bot_in_channel(client=client, channel_id=channel_id):
+            if not channel_info["is_private"]:
+                channel.add_bot_to_channel(
+                    client=client,
+                    channel_id=channel_id
+                )
+            else:
+                # unable to add bot to channel!
+                error = f"Unable to add Converse to <#{channel_id}>. If this is a private channel, please manually add Converse then try again."
+                say(error)
+                logger.error(error)
+                raise
 
         # TODO: this needs to call the common extend_thread function, yet to be placed
         # conversation.extend_thread(client, shortcut["user"]["id"], shortcut["channel"]["id"], main_ts)

@@ -203,14 +203,18 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
     if not channel.is_bot_in_channel(
         client=client,
         channel_id=channel_id
-    ) and not channel_info["is_private"]:
-        channel.add_bot_to_channel(
-            client=client,
-            channel_id=channel_id
-        )
-    else:
-        # unable to add bot to channel!
-        error = f"Unable to add Converse to <#{channel_id}>. If this is a private channel, please manually add Converse then try again."
+    ): 
+        if not channel_info["is_private"]:
+            channel.add_bot_to_channel(
+                client=client,
+                channel_id=channel_id
+            )
+        else:
+            # unable to add bot to channel!
+            error = f"Unable to add Converse to <#{channel_id}>. If this is a private channel, please manually add Converse then try again."
+            client.chat_postEphemeral(channel=channel_id, user=body["user"]["id"], text=error)
+            logger.error(error)
+            raise
     
     # ---------------------------------------
 
