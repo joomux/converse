@@ -114,7 +114,7 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
         # Required fields to check
         required_fields = [
             {"block": "channel_topic", "action": "channel_topic_input"},
-            {"block": "channel_description", "action": "channel_description_input"},
+            # {"block": "channel_description", "action": "channel_description_input"},
             {"block": "num_participants", "action": "do_nothing"},
             {"block": "num_posts", "action": "do_nothing"},
             {"block": "post_length", "action": "do_nothing"},
