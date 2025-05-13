@@ -147,7 +147,7 @@
 							"text": "Open",
 							"emoji": true
 						},
-						"action_id": "enter_builder_mode"
+						"value": "open_onboarding"
 					},
 					{
 						"text": {
@@ -155,7 +155,7 @@
 							"text": "Rename",
 							"emoji": true
 						},
-						"action_id": "enter_builder_mode"
+						"value": "rename_onboarding"
 					},
 					{
 						"text": {
@@ -163,7 +163,7 @@
 							"text": "Duplicate",
 							"emoji": true
 						},
-						"action_id": "enter_builder_mode"
+						"value": "duplicate_onboarding"
 					},
 					{
 						"text": {
@@ -171,7 +171,7 @@
 							"text": "Delete",
 							"emoji": true
 						},
-						"action_id": "enter_builder_mode"
+						"value": "delete_onboarding"
 					}
 				]
 			}
