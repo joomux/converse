@@ -1,5 +1,5 @@
 from logging import Logger
-from utils import user
+from utils import user, channel as channel_utility
 from utils.database import Database, DatabaseConfig
 from ai import devxp
 import random
@@ -33,13 +33,17 @@ def extend_thread(client, member_id, channel_id, message_ts, say: Say, logger: L
     member_ids = client.conversations_members(channel=channel_id)["members"]
 
     # Get human members
-    human_members = [
-        member_id for member_id in member_ids
-        if not client.users_info(user=member_id)["user"]["is_bot"]
-    ]
+    human_members = channel_utility.get_users(
+        client=client,
+        channel_id=channel_id
+    )
+    # Remove the bot/app from the human_members list
+    bot_info = client.auth_test()
+    bot_user_id = bot_info["bot_id"]
+    human_members = [member for member in human_members if member["id"] != bot_user_id]
 
     # Limit the thread to 5 members
-    conversation_participants = random.sample(human_members, min(len(human_members), 5))
+    # conversation_participants = random.sample(human_members, min(len(human_members), 5))
 
     logger.info(thread)
     thread_messages = []
