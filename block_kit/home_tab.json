@@ -43,7 +43,7 @@
 						"text": ":toolbox: Enter Builder Mode",
 						"emoji": true
 					},
-					"action_id": "do_nothing"
+					"action_id": "app_home_popup"
 				}
 			]
 		},
@@ -75,7 +75,7 @@
 						"text": "🔍 Browse Templates",
 						"emoji": true
 					},
-					"action_id": "do_nothing"
+					"action_id": "app_home_popup"
 				}
 			]
 		},
@@ -98,7 +98,7 @@
 			},
 			"accessory": {
 				"type": "overflow",
-				"action_id": "do_nothing",
+				"action_id": "app_home_popup",
 				"options": [
 					{
 						"text": {
@@ -139,7 +139,7 @@
 			},
 			"accessory": {
 				"type": "overflow",
-				"action_id": "enter_builder_mode",
+				"action_id": "app_home_popup",
 				"options": [
 					{
 						"text": {
