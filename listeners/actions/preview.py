@@ -35,7 +35,7 @@ def app_home_popup(ack: Ack, body, client: WebClient, logger: Logger):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "We :heart: your enthusiasim, but this is not quite ready yet!"
+                    "text": "We :heart: your enthusiasm, but this is not quite ready yet!"
                 }
             },
             {
