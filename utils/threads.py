@@ -41,6 +41,7 @@ def extend_thread(client, member_id, channel_id, message_ts, say: Say, logger: L
     bot_info = client.auth_test()
     bot_user_id = bot_info["bot_id"]
     human_members = [member for member in human_members if member["id"] != bot_user_id]
+    human_member_ids = [member["id"] for member in human_members]
 
     # Limit the thread to 5 members
     # conversation_participants = random.sample(human_members, min(len(human_members), 5))
@@ -78,7 +79,7 @@ def extend_thread(client, member_id, channel_id, message_ts, say: Say, logger: L
         description=channel["description"],
         topic=channel["topic"],
         thread=thread_messages,
-        members=human_members
+        members=human_member_ids
     )
 
     for reply in new_replies:
