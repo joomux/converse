@@ -390,6 +390,12 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
             history_id=history_row["id"]
         )
 
+        thread_messages = [{
+            "text": message_result["message"]["text"],
+            "author_type": "bot",
+            "user": {"id": author["id"]}
+        }]
+
         logger.info(f"MESSAGE_RESULT {message_result}")
 
         if "ok" in message_result and message_result["ok"]:
@@ -416,7 +422,7 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
             reply_content = devxp.thread(
                 description=channel_purpose,
                 topic=channel_topic,
-                thread=message_result,
+                thread=thread_messages,
                 members=participant_ids,
                 replies=total_replies
             )
