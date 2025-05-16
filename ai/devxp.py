@@ -101,7 +101,7 @@ def fetch_message(author: str, conversation_participants: list, purpose: str, ch
                                 "items":{
                                     "type":"string"
                                 },
-                                "description":"A list of emojis used in response to this Slack message."
+                                "description":"A list of emojis used in response to this Slack message. Emojis must be named only."
                             }
                             },
                             "required":[
@@ -350,7 +350,7 @@ def thread(description: str, topic: str, thread: dict, members: list, replies: i
                                 "reacjis": {
                                     "type": "array",
                                     "items": {"type": "string"},
-                                    "description": "An optional list of emojis used in response to this Slack message."
+                                    "description": "An optional list of emojis used in response to this Slack message. Emojis must be named only."
                                 }
                             },
                             "required": ["author", "message"]
