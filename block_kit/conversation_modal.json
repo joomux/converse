@@ -252,7 +252,7 @@
 				"initial_option": {
 					"text": {
 						"type": "plain_text",
-						"text": "5-10",
+						"text": "Up to 10",
 						"emoji": true
 					},
 					"value": "1-10"
@@ -370,7 +370,7 @@
 					{
 						"text": {
 							"type": "plain_text",
-							"text": "Up to 0-2"
+							"text": "Up to 2"
 						},
 						"value": "0-2"
 					},

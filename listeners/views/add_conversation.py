@@ -12,6 +12,7 @@ from datetime import timedelta
 
 def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     try:
+        # ack()
         # Log the entire request for debugging
         logger.info("SINGLE_CHANNEL_FORM RECEIVED PAYLOAD:")
         logger.info(json.dumps(body))
@@ -29,15 +30,15 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
         # channel_info = client.conversations_info(channel=channel_id)
         # logger.info(f"CHANNEL INFO: {channel_info}")
 
+        channel_info = channel.get_info(
+            client=client,
+            channel_id=channel_id
+        )
         if not channel.is_bot_in_channel(
             client=client,
             channel_id=channel_id
         ): 
-            # now that 
-            channel_info = channel.get_info(
-                client=client,
-                channel_id=channel_id
-            )
+            
             logger.info(channel_info)
             if channel_info and not channel_info["is_private"]:
                 channel.add_bot_to_channel(
@@ -59,81 +60,49 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
                 }
                 rendered = helper.render_block_kit(template=error_modal, data=error_data)
                 return ack(response_action="update", view=rendered)
+                # return client.views_update(view_id=view_id, view=rendered)
 
         conversation_modal["private_metadata"] = channel_id
+
+        # channel_info = channel.get_info(
+        #     client=client,
+        #     channel_id=channel_id
+        # )
+
+        # logger.info(channel_info)
 
         # Update blocks with proper validation for empty values
         for block in conversation_modal["blocks"]:
             if block.get("block_id") == "channel_topic":
-                topic_value = channel_info["channel"]["topic"]["value"] or ""
+                topic_value = channel_info["topic"]["value"] if channel_info["topic"]["value"] else ""
                 if topic_value:
                     block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
                     block["element"]["initial_value"] = topic_value
                     logger.info(f"Set topic value: {topic_value}")
                 
             if block.get("block_id") == "channel_description":
-                purpose_value = channel_info["channel"]["purpose"]["value"] or ""
+                # This line retrieves the purpose value from the channel_info dictionary. If the value is not present or is None, it defaults to an empty string.
+                purpose_value = channel_info["purpose"]["value"] if channel_info["purpose"]["value"] else ""
                 if purpose_value:
                     block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
                     block["element"]["initial_value"] = purpose_value
                     logger.info(f"Set purpose value: {purpose_value}")
-            
-        #     # Set default values for required fields
-        #     if block.get("block_id") == "num_participants":
-        #         if "accessory" in block and "options" in block["accessory"]:
-        #             # Default to first option if none is selected
-        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-        #             logger.info(f"Set num_participants default: {block['accessory']['options'][0]['value']}")
-            
-        #     if block.get("block_id") == "num_posts":
-        #         if "accessory" in block and "options" in block["accessory"]:
-        #             # Default to first option if none is selected
-        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-        #             logger.info(f"Set num_posts default: {block['accessory']['options'][0]['value']}")
-            
-        #     if block.get("block_id") == "post_length":
-        #         if "accessory" in block and "options" in block["accessory"]:
-        #             # Default to first option if none is selected
-        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-        #             logger.info(f"Set post_length default: {block['accessory']['options'][0]['value']}")
-            
-        #     if block.get("block_id") == "tone":
-        #         if "accessory" in block and "options" in block["accessory"]:
-        #             # Default to first option if none is selected
-        #             block["accessory"]["initial_option"] = block["accessory"]["options"][2]
-        #             logger.info(f"Set tone default: {block['accessory']['options'][0]['value']}")
-                    
-        #     if block.get("block_id") == "emoji_density":
-        #         if "accessory" in block and "options" in block["accessory"]:
-        #             # Default to first option if none is selected
-        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-        #             logger.info(f"Set emoji_density default: {block['accessory']['options'][0]['value']}")
-                    
-        #     if block.get("block_id") == "thread_replies":
-        #         if "accessory" in block and "options" in block["accessory"]:
-        #             # Default to first option if none is selected
-        #             block["accessory"]["initial_option"] = block["accessory"]["options"][0]
-        #             logger.info(f"Set thread_replies default: {block['accessory']['options'][0]['value']}")
-                    
-        #     if block.get("block_id") == "canvas":
-        #         if "accessory" in block and "options" in block["accessory"]:
-        #             # Default to "No" for canvas
-        #             block["accessory"]["initial_option"] = block["accessory"]["options"][1]  # "No" option
-        #             logger.info(f"Set canvas default: {block['accessory']['options'][1]['value']}")
 
         # Log the final modal we're sending
         logger.info("SENDING MODAL:")
-        logger.info(json.dumps(conversation_modal))
+        # logger.info(json.dumps(conversation_modal))
         
+        # client.views_update(view_id=view_id, view=conversation_modal)
         # Use ack() with response_action instead of client.views_update
-        response = ack(response_action="update", view=conversation_modal)
-        logger.info(f"ACK response: {response}")
-        return response
+        ack(response_action="update", view=conversation_modal)
+        # logger.info(f"ACK response: {response}")
+        # return response
+        return
 
     except Exception as e:
         logger.error(f"Error in single_channel_form: {e}", exc_info=True)
         # Still need to acknowledge even if there's an error
-        ack()
+        return False
     
 def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     logger.info("TIME TO GENERATE THE CONVERSATION!")
@@ -227,14 +196,14 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
         canvas = False
 
     # 1. make sure the app is part of this channel and handle if it's a private channel without membership
+    channel_info = channel.get_info(
+        client=client,
+        channel_id=channel_id
+    )
     if not channel.is_bot_in_channel(
         client=client,
         channel_id=channel_id
     ): 
-        channel_info = channel.get_info(
-            client=client,
-            channel_id=channel_id
-        )
         if channel_info["ok"] and not channel_info["is_private"]:
             channel.add_bot_to_channel(
                 client=client,
