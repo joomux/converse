@@ -597,7 +597,7 @@ def design_channel(channel_name: str, channel_topic: str, channel_description: s
                     },
                     "num_posts": {
                         "type": "string",
-                        "description": "The range of channel posts to include in the conversation. Values are: 5-10, 11-20, 21-30, 31-50"
+                        "description": "The range of channel posts to include in the conversation. Values are: 1-10, 1-20, 1-30, 1-50"
                     },
                     "post_length": {
                         "type": "string",
@@ -613,7 +613,7 @@ def design_channel(channel_name: str, channel_topic: str, channel_description: s
                     },
                     "thread_replies": {
                         "type": "string",
-                        "description": "The approximate number replies to add to each post in the channel. Values are: 0-2, 3-5, 6-10, 11-15"
+                        "description": "The approximate number replies to add to each post in the channel. Values are: 0-2, 0-5, 0-10, 0-15"
                     },
                 },
                 "required": ["canvas", "num_participants", "num_posts", "post_length", "tone", "emoji_density", "thread_replies"],
