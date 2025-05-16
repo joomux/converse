@@ -26,8 +26,39 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
         channel_id = body["view"]["state"]["values"]["add_conversation_channel_selector"]["conversation_select"]["selected_conversation"]
         logger.info(f"Selected channel_id: {channel_id}")
         
-        channel_info = client.conversations_info(channel=channel_id)
-        logger.info(f"CHANNEL INFO: {channel_info}")
+        # channel_info = client.conversations_info(channel=channel_id)
+        # logger.info(f"CHANNEL INFO: {channel_info}")
+
+        if not channel.is_bot_in_channel(
+            client=client,
+            channel_id=channel_id
+        ): 
+            # now that 
+            channel_info = channel.get_info(
+                client=client,
+                channel_id=channel_id
+            )
+            logger.info(channel_info)
+            if channel_info and not channel_info["is_private"]:
+                channel.add_bot_to_channel(
+                    client=client,
+                    channel_id=channel_id
+                )
+            else:
+                # unable to add bot to channel!
+                bot = client.auth_test()
+                error = f"Unable to add <@{bot['user_id']}> to <#{channel_id}>. If this is a private channel, please manually add <@{bot['user_id']}> then try again."
+                # client.chat_postEphemeral(channel=channel_id, user=body["user"]["id"], text=error)
+                logger.error(error)
+                view_path = os.path.join("block_kit", "error_modal.json")
+                with open(view_path, 'r') as file:
+                    error_modal = json.load(file)
+                error_data = {
+                    "title": "An error has occurred",
+                    "error": error
+                }
+                rendered = helper.render_block_kit(template=error_modal, data=error_data)
+                return ack(response_action="update", view=rendered)
 
         conversation_modal["private_metadata"] = channel_id
 
@@ -104,7 +135,7 @@ def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger,
         # Still need to acknowledge even if there's an error
         ack()
     
-def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logger):
+def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     logger.info("TIME TO GENERATE THE CONVERSATION!")
     
     # First validate all required fields are present
@@ -167,10 +198,6 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
     db = Database(DatabaseConfig()) # so that we can log history events
     current_user = worker.get_user(client, body["user"]["id"])
     channel_id = body["view"]["private_metadata"]
-    channel_info = channel.get_info(
-        client=client,
-        channel_id=channel_id
-    )
 
     # Prep the message history log
     history_entry = {
@@ -204,17 +231,29 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
         client=client,
         channel_id=channel_id
     ): 
-        if not channel_info["is_private"]:
+        channel_info = channel.get_info(
+            client=client,
+            channel_id=channel_id
+        )
+        if channel_info["ok"] and not channel_info["is_private"]:
             channel.add_bot_to_channel(
                 client=client,
                 channel_id=channel_id
             )
         else:
             # unable to add bot to channel!
-            error = f"Unable to add Converse to <#{channel_id}>. If this is a private channel, please manually add Converse then try again."
-            client.chat_postEphemeral(channel=channel_id, user=body["user"]["id"], text=error)
-            logger.error(error)
-            raise
+            bot = client.auth_test()
+            error = f"Unable to add <@{bot['user_id']}> to <#{channel_id}>. If this is a private channel, please manually add <@{bot['bot_id']}> then try again."
+            # client.chat_postEphemeral(channel=channel_id, user=body["user"]["id"], text=error)
+            view_path = os.path.join("block_kit", "error_modal.json")
+            with open(view_path, 'r') as file:
+                error_modal = json.load(file)
+            error_data = {
+                "title": "An error has occurred",
+                "error": error
+            }
+            rendered = helper.render_block_kit(template=error_modal, data=error_data)
+            return ack(response_action="update", view=rendered)
     
     # ---------------------------------------
 

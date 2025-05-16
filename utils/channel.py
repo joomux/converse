@@ -21,7 +21,7 @@ def is_bot_in_channel(client: WebClient, channel_id: str):
         
     except Exception as e:
         logger.error(f"Error checking/joining channel {channel_id}: {e}")
-        raise
+        return False
 
 def add_bot_to_channel(client: WebClient, channel_id: str):
     logger.info("Adding bot to channel")
@@ -44,7 +44,7 @@ def get_info(client: WebClient, channel_id: str):
             return info["channel"]
     except Exception as e:
         logger.error(f"Error getting channel info: {e}")
-        raise
+        # raise
     return False
 
 def get_users(client: WebClient, channel_id: str, exclude_bots: bool = True):

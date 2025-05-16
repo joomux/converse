@@ -48,3 +48,13 @@ def loading_formatter(posts:str, replies: str, canvas: str, current: str):
     content = content.replace("%%current%%", current)
 
     return json.loads(content)
+
+
+def render_block_kit(template, data):
+    json_string = json.dumps(template)
+    for key, value in data.items():
+        # if isinstance(value, str):
+        json_string = json_string.replace("{" + key + "}", str(value))
+        # else:
+            # return render_block_kit(value, data)
+    return json.loads(json_string)

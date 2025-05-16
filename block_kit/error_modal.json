@@ -1,0 +1,22 @@
+{
+	"title": {
+		"type": "plain_text",
+		"text": "{title}",
+		"emoji": true
+	},
+	"type": "modal",
+	"close": {
+		"type": "plain_text",
+		"text": "Close",
+		"emoji": true
+	},
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "{error}"
+			}
+		}
+	]
+}
