@@ -244,14 +244,14 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
 
     # 3. Update the channel topic and description if required
     logger.info(f"CHANNEL INFO: {channel_info}")
-    if channel_info["purpose"]["value"] != channel_purpose:
+    if channel_purpose and channel_info["purpose"]["value"] != channel_purpose:
         channel.set_purpose(
             client=client,
             channel_id=channel_id,
             purpose=channel_purpose
         )
     
-    if channel_info["topic"]["value"] != channel_topic:
+    if channel_topic and channel_info["topic"]["value"] != channel_topic:
         channel.set_topic(
             client=client,
             channel_id=channel_id,
