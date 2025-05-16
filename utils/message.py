@@ -222,13 +222,15 @@ def send_reacjis(client, channel_id, message_ts: str, reacji: str|list):
     for r in reacji:
         try:
             if isinstance(r, list):
+                logger.info("Found a list of reacjis instead. Iterating again!")
+                logger.info(r)
                 send_reacjis(client, channel_id, message_ts, r)
             else:
-                client.reactions_add(
+                result = client.reactions_add(
                     channel=channel_id,
                     timestamp=message_ts,
                     name=r.strip(':')
                 )
         except Exception as e:
-            logger.error(f"Error adding reaction {reacji} to post {message_ts}: {e}")
+            logger.error(f"Error adding reaction {r} to post {message_ts}: {e}")
             continue
