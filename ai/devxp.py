@@ -546,12 +546,18 @@ def design_channel(channel_name: str, channel_topic: str, channel_description: s
     url = API_BASE_URL
 
     prompt = (
-        "I am a solution engineer at Slack. I need to design a Slack channel for a demonstration. "
+        "Design the parameters needed to simulate a Slack channel for a Slack demonstration. Assume the type of personas in the conversation based on the following details. "
         "\nBased on the details of the channel, determine the variables required to design a simulated conversation. "
         f"\nCHANNEL NAME: {channel_name}"
-        f"\nCURRENT TOPIC: {channel_topic}"
-        f"\nCHANNEL DESCRIPTION: {channel_description}"
     )
+    if channel_topic:
+        prompt += (
+            f"\nCURRENT TOPIC: {channel_topic}"
+        )
+    if channel_description:
+        prompt += (
+            f"\nCHANNEL DESCRIPTION: {channel_description}"
+        )
 
     payload = {
         "messages": [
