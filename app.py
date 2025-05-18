@@ -9,7 +9,7 @@ from slack_sdk.oauth.installation_store.sqlalchemy import SQLAlchemyInstallation
 from slack_sdk.oauth.state_store.sqlalchemy import SQLAlchemyOAuthStateStore
 import sqlalchemy
 from sqlalchemy.engine import Engine
-from flask import Flask, request, jsonify, Response, render_template
+from flask import Flask, request, jsonify, Response, render_template, redirect
 from slack_bolt.request import BoltRequest
 
 from listeners import register_listeners
@@ -152,18 +152,24 @@ def oauth_redirect():
         logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
         return "An error occurred during the OAuth process", 500
 
-# @flask_app.route("/index.html")
-# @flask_app.route("/")
-# def landing():
-#     return render_template("index.html")
+@flask_app.route("/index.html")
+@flask_app.route("/")
+def landing():
+    if request.args.get('code'):
+        return handler.handle(request) # support install follow up with code param
+    else:
+        # return render_template("index.html")
+        return redirect("https://converse-install-faa964a4e3f2.herokuapp.com/")
 
-# @flask_app.errorhandler(404)
-# def page_not_found(e):
-#     return render_template('404.html'), 404
+@flask_app.errorhandler(404)
+def page_not_found(e):
+    logger.error(f"404 error: {e}")
+    return render_template('404.html'), 404
 
-# @flask_app.errorhandler(500)
-# def server_error(e):
-#     return render_template('500.html'), 500
+@flask_app.errorhandler(500)
+def server_error(e):
+    logger.error(f"500 error: {e}")
+    return render_template('500.html'), 500
 
 # Start Bolt app
 if __name__ == "__main__":
