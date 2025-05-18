@@ -232,5 +232,5 @@ def send_reacjis(client, channel_id, message_ts: str, reacji: str|list):
                     name=r.strip(':')
                 )
         except Exception as e:
-            logger.error(f"Error adding reaction {r} to post {message_ts}: {e}")
+            logger.error(f"Error adding reaction '{r}' to post {message_ts}: {e}")
             continue
