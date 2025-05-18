@@ -11,6 +11,7 @@ import sqlalchemy
 from sqlalchemy.engine import Engine
 from flask import Flask, request, jsonify, Response, render_template, redirect
 from slack_bolt.request import BoltRequest
+import requests
 
 from listeners import register_listeners
 
@@ -156,6 +157,13 @@ def oauth_redirect():
 @flask_app.route("/")
 def landing():
     if request.args.get('code'):
+        # post an install result
+        bot = app.client.auth_test()
+        # https://hooks.slack.com/triggers/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
+        requests.post(
+            url="https://hooks.slack.com/triggers/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",
+            json={"url": bot["url"], "team": bot["team"]}
+        )
         return handler.handle(request) # support install follow up with code param
     else:
         # return render_template("index.html")
