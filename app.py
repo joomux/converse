@@ -134,13 +134,6 @@ def install():
             headers=request.headers,
         )
         bolt_resp = app.oauth_flow.handle_installation(bolt_request)
-        bot = app.client.auth_test()
-        # https://hooks.slack.com/triggers/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
-        requests.post(
-            url="https://hooks.slack.com/triggers/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",
-            data={"url": bot['url'], "team": bot['team']},
-            headers={"Content-Type": "application/json"}
-        )
         return Response(
             response=bolt_resp.body, status=bolt_resp.status, headers=bolt_resp.headers
         )
@@ -167,11 +160,11 @@ def landing():
         # post an install result
         # result = handler.handle(request) # support install follow up with code param
         # bot = app.client.auth_test()
-        # # https://hooks.slack.com/triggers/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
-        # requests.post(
-        #     url="https://hooks.slack.com/triggers/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",
-        #     headers={"Content-Type": "application/json"}
-        # )
+        # https://hooks.slack.com/triggers/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
+        requests.post(
+            url="https://hooks.slack.com/triggers/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",
+            headers={"Content-Type": "application/json"}
+        )
         return handler.handle(request)
     else:
         # return render_template("index.html")
