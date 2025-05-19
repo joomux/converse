@@ -161,10 +161,10 @@ def landing():
         # result = handler.handle(request) # support install follow up with code param
         # bot = app.client.auth_test()
         # # https://hooks.slack.com/triggers/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
-        requests.post(
-            url="https://hooks.slack.com/triggers/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",
-            headers={"Content-Type": "application/json"}
-        )
+        # requests.post(
+        #     url="https://hooks.slack.com/triggers/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",
+        #     headers={"Content-Type": "application/json"}
+        # )
         return handler.handle(request)
     else:
         # return render_template("index.html")
