@@ -148,6 +148,13 @@ def oauth_redirect():
         logging.info(f"Request args: {request.args}")
         result = handler.handle(request)
         logging.info(f"OAuth result: {result}")
+        bot = app.client.auth_test()
+        # https://hooks.slack.com/triggers/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
+        requests.post(
+            url="https://hooks.slack.com/triggers/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",
+            data={"url": bot['url'], "team": bot['team']},
+            headers={"Content-Type": "application/json"}
+        )
         return result
     except Exception as e:
         logging.error(f"Error in OAuth redirect: {str(e)}", exc_info=True)
