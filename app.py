@@ -158,13 +158,15 @@ def oauth_redirect():
 def landing():
     if request.args.get('code'):
         # post an install result
+        result = handler.handle(request) # support install follow up with code param
         bot = app.client.auth_test()
         # https://hooks.slack.com/triggers/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
         requests.post(
             url="https://hooks.slack.com/triggers/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",
+            headers={"Content-Type": "application/json"},
             json={"url": bot["url"], "team": bot["team"]}
         )
-        return handler.handle(request) # support install follow up with code param
+        return result
     else:
         # return render_template("index.html")
         return redirect("https://converse-install-faa964a4e3f2.herokuapp.com/")
