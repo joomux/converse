@@ -19,34 +19,81 @@ def load_modal_template(template_name: str) -> dict:
     with open(view_path, 'r') as file:
         return json.load(file)
 
+# ORIGINAL
+# def get_channel_info_with_bot_status(client: WebClient, channel_id: str, logger: Logger) -> tuple[dict, bool]:
+#     """
+#     Get channel info and bot membership status in a single optimized call.
+#     Returns tuple of (channel_info, is_bot_member)
+#     """
+#     try:
+#         # Get channel info and members in parallel
+#         channel_info = client.conversations_info(channel=channel_id, include_num_members=True)
+        
+#         if not channel_info["ok"]:
+#             logger.error(f"Failed to get channel info for {channel_id}")
+#             return None, False
+            
+#         members_response = client.conversations_members(channel=channel_id)
+        
+#         # Get bot's user ID (this could be cached at app startup)
+#         bot_info = client.auth_test()
+#         bot_user_id = bot_info["user_id"]
+        
+#         # Check if bot is a member
+#         is_bot_member = bot_user_id in members_response["members"]
+        
+#         return channel_info["channel"], is_bot_member
+    
+#     except Exception as e:
+#         logger.error(f"Error in get_channel_info_with_bot_status: {e}", exc_info=True)
+#         return None, False
+
 def get_channel_info_with_bot_status(client: WebClient, channel_id: str, logger: Logger) -> tuple[dict, bool]:
     """
     Get channel info and bot membership status in a single optimized call.
     Returns tuple of (channel_info, is_bot_member)
     """
     try:
-        # Get channel info and members in parallel
+        # Get channel info first
         channel_info = client.conversations_info(channel=channel_id, include_num_members=True)
         
         if not channel_info["ok"]:
             logger.error(f"Failed to get channel info for {channel_id}")
             return None, False
             
-        members_response = client.conversations_members(channel=channel_id)
-        
-        # Get bot's user ID (this could be cached at app startup)
+        # Get bot's user ID
         bot_info = client.auth_test()
         bot_user_id = bot_info["user_id"]
         
+        # Handle pagination for members
+        all_members = []
+        next_cursor = None
+        
+        while True:
+            if next_cursor:
+                members_response = client.conversations_members(channel=channel_id, cursor=next_cursor)
+            else:
+                members_response = client.conversations_members(channel=channel_id)
+                
+            if not members_response["ok"]:
+                logger.error(f"Failed to get members for {channel_id}")
+                return None, False
+                
+            all_members.extend(members_response["members"])
+            
+            next_cursor = members_response.get("response_metadata", {}).get("next_cursor")
+            if not next_cursor:
+                break
+        
         # Check if bot is a member
-        is_bot_member = bot_user_id in members_response["members"]
+        is_bot_member = bot_user_id in all_members
         
         return channel_info["channel"], is_bot_member
     
     except Exception as e:
         logger.error(f"Error in get_channel_info_with_bot_status: {e}", exc_info=True)
         return None, False
-
+    
 def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     try:
         
@@ -232,7 +279,8 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
         client=client,
         channel_id=channel_id
     ): 
-        if channel_info["ok"] and not channel_info["is_private"]:
+        # Changed this line to check is_private directly from channel_info
+        if not channel_info.get("is_private", False):
             channel.add_bot_to_channel(
                 client=client,
                 channel_id=channel_id
@@ -241,7 +289,6 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
             # unable to add bot to channel!
             bot = client.auth_test()
             error = f"Unable to add <@{bot['user_id']}> to <#{channel_id}>. If this is a private channel, please manually add <@{bot['bot_id']}> then try again."
-            # client.chat_postEphemeral(channel=channel_id, user=body["user"]["id"], text=error)
             view_path = os.path.join("block_kit", "error_modal.json")
             with open(view_path, 'r') as file:
                 error_modal = json.load(file)
