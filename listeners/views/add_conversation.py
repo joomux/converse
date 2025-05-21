@@ -9,94 +9,122 @@ import random
 from utils import message, worker, channel, helper
 from utils.database import Database, DatabaseConfig
 from datetime import timedelta
+from functools import lru_cache
+
+# Cache for modal templates to avoid repeated file reads
+@lru_cache(maxsize=32)
+def load_modal_template(template_name: str) -> dict:
+    """Load and cache modal templates from JSON files."""
+    view_path = os.path.join("block_kit", f"{template_name}.json")
+    with open(view_path, 'r') as file:
+        return json.load(file)
+
+def get_channel_info_with_bot_status(client: WebClient, channel_id: str, logger: Logger) -> tuple[dict, bool]:
+    """
+    Get channel info and bot membership status in a single optimized call.
+    Returns tuple of (channel_info, is_bot_member)
+    """
+    try:
+        # Get channel info and members in parallel
+        channel_info = client.conversations_info(channel=channel_id, include_num_members=True)
+        
+        if not channel_info["ok"]:
+            logger.error(f"Failed to get channel info for {channel_id}")
+            return None, False
+            
+        members_response = client.conversations_members(channel=channel_id)
+        
+        # Get bot's user ID (this could be cached at app startup)
+        bot_info = client.auth_test()
+        bot_user_id = bot_info["user_id"]
+        
+        # Check if bot is a member
+        is_bot_member = bot_user_id in members_response["members"]
+        
+        return channel_info["channel"], is_bot_member
+    
+    except Exception as e:
+        logger.error(f"Error in get_channel_info_with_bot_status: {e}", exc_info=True)
+        return None, False
 
 def single_channel_form(ack: Ack, body, client: WebClient, view, logger: Logger, say: Say):
     try:
-        # ack()
-        # Log the entire request for debugging
+        
         logger.info("SINGLE_CHANNEL_FORM RECEIVED PAYLOAD:")
         logger.info(json.dumps(body))
         
-        view_path = os.path.join("block_kit", "conversation_modal.json")
-        with open(view_path, 'r') as file:
-            conversation_modal = json.load(file)
-        
+        # Load modal template from cache
+        conversation_modal = load_modal_template("conversation_modal")
         view_id = body["view"]["id"]
         logger.info(f"Using view_id: {view_id}")
         
         channel_id = body["view"]["state"]["values"]["add_conversation_channel_selector"]["conversation_select"]["selected_conversation"]
         logger.info(f"Selected channel_id: {channel_id}")
         
-        # channel_info = client.conversations_info(channel=channel_id)
-        # logger.info(f"CHANNEL INFO: {channel_info}")
-
-        channel_info = channel.get_info(
-            client=client,
-            channel_id=channel_id
-        )
-        if not channel.is_bot_in_channel(
-            client=client,
-            channel_id=channel_id
-        ): 
-            
-            logger.info(channel_info)
-            if channel_info and not channel_info["is_private"]:
-                channel.add_bot_to_channel(
-                    client=client,
-                    channel_id=channel_id
-                )
+        # Get channel info and bot status in a single optimized call
+        channel_info, is_bot_member = get_channel_info_with_bot_status(client, channel_id, logger)
+        
+        if not channel_info:
+            bot = client.auth_test()
+            error_modal = load_modal_template("error_modal")
+            error_data = {
+                "title": "An error has occurred",
+                "error": f"Unable to get information for channel <#{channel_id}>. If this is a private channel, please manually add <@{bot['user_id']}> then try again."
+            }
+            rendered = helper.render_block_kit(template=error_modal, data=error_data)
+            return ack(response_action="update", view=rendered)
+        
+        # Handle bot membership
+        if not is_bot_member:
+            if not channel_info["is_private"]:
+                try:
+                    client.conversations_join(channel=channel_id)
+                except Exception as e:
+                    logger.error(f"Error adding bot to channel: {e}")
+                    bot = client.auth_test()
+                    error = f"Unable to add <@{bot['user_id']}> to <#{channel_id}>. Please try again."
+                    error_modal = load_modal_template("error_modal")
+                    error_data = {
+                        "title": "An error has occurred",
+                        "error": error
+                    }
+                    rendered = helper.render_block_kit(template=error_modal, data=error_data)
+                    return ack(response_action="update", view=rendered)
             else:
-                # unable to add bot to channel!
-                bot = client.auth_test()
                 error = f"Unable to add <@{bot['user_id']}> to <#{channel_id}>. If this is a private channel, please manually add <@{bot['user_id']}> then try again."
-                # client.chat_postEphemeral(channel=channel_id, user=body["user"]["id"], text=error)
-                logger.error(error)
-                view_path = os.path.join("block_kit", "error_modal.json")
-                with open(view_path, 'r') as file:
-                    error_modal = json.load(file)
+                error_modal = load_modal_template("error_modal")
                 error_data = {
                     "title": "An error has occurred",
                     "error": error
                 }
                 rendered = helper.render_block_kit(template=error_modal, data=error_data)
                 return ack(response_action="update", view=rendered)
-                # return client.views_update(view_id=view_id, view=rendered)
 
         conversation_modal["private_metadata"] = channel_id
-
-        # channel_info = channel.get_info(
-        #     client=client,
-        #     channel_id=channel_id
-        # )
-
-        # logger.info(channel_info)
 
         # Update blocks with proper validation for empty values
         for block in conversation_modal["blocks"]:
             if block.get("block_id") == "channel_topic":
                 topic_value = channel_info["topic"]["value"] if channel_info["topic"]["value"] else ""
                 if topic_value:
-                    block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
                     block["element"]["initial_value"] = topic_value
+                    if len(topic_value) > 150:
+                        topic_value = topic_value[:147] + "..."
+                    block["element"]["placeholder"] = {"type": "plain_text", "text": topic_value, "emoji": True}
                     logger.info(f"Set topic value: {topic_value}")
                 
             if block.get("block_id") == "channel_description":
-                # This line retrieves the purpose value from the channel_info dictionary. If the value is not present or is None, it defaults to an empty string.
                 purpose_value = channel_info["purpose"]["value"] if channel_info["purpose"]["value"] else ""
                 if purpose_value:
-                    block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
                     block["element"]["initial_value"] = purpose_value
+                    if len(purpose_value) > 150:
+                        purpose_value = purpose_value[:147] + "..."
+                    block["element"]["placeholder"] = {"type": "plain_text", "text": purpose_value, "emoji": True}
                     logger.info(f"Set purpose value: {purpose_value}")
 
-        # Log the final modal we're sending
-        logger.info("SENDING MODAL:")
-        # logger.info(json.dumps(conversation_modal))
-        
-        # client.views_update(view_id=view_id, view=conversation_modal)
-        # Use ack() with response_action instead of client.views_update
+        # Use ack() with response_action
         ack(response_action="update", view=conversation_modal)
-        # logger.info(f"ACK response: {response}")
-        # return response
+        # client.views_update(view_id=view_id, view=conversation_modal)
         return
 
     except Exception as e:
