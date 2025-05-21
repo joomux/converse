@@ -466,10 +466,15 @@ def fetch_channels(customer_name: str, use_case: str):
 
 def fetch_canvas(channel_name: str = "", channel_purpose: str = "", channel_topic: str = "", member_list: list = [None]):
 
-    # Format member IDs with <@ > syntax
-    formatted_members = [f"![](@{member_id})" for member_id in member_list]
+
+    if isinstance(member_list, list):
+        if all(isinstance(member, dict) for member in member_list):
+            formatted_members = [f"![](@{member['id']})" for member in member_list]
+        else:
+            formatted_members = [f"![](@{member_id})" for member_id in member_list]
+    else:
+        formatted_members = []
     logger.debug(f"Formatted member list: {formatted_members}")
-    # Join the formatted member list with commas
     member_string = ", ".join(formatted_members)
     logger.debug(f"Member string: {member_string}")
     
@@ -529,6 +534,8 @@ def fetch_canvas(channel_name: str = "", channel_purpose: str = "", channel_topi
         }
     })
     
+    logger.info("BUILD CANVAS PAYLOAD")
+    logger.info(payload)
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + os.environ["DEVXP_API_KEY"]
