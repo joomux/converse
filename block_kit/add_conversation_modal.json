@@ -498,6 +498,13 @@
 							"text": "Legal"
 						},
 						"value": "legal"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Social & Fun"
+						},
+						"value": "social fun"
 					}
 				],
 				"action_id": "do_nothing"

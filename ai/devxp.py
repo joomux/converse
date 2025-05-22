@@ -612,7 +612,7 @@ def design_channel(channel_name: str, channel_topic: str, channel_description: s
                     },
                     "tone": {
                         "type": "string",
-                        "description": "The tone of the conversation to be used. Values are: formal, casual, professional, technical, executive, legal"
+                        "description": "The tone of the conversation to be used. Values are: formal, casual, professional, technical, executive, legal, social fun"
                     },
                     "emoji_density": {
                         "type": "string",
