@@ -21,20 +21,11 @@
 			"fields": [
 				{
 					"type": "mrkdwn",
-					"text": "*Posts*"
-				},
-				{
-					"type": "mrkdwn",
-					"text": "*Canvas*"
+					"text": "*Now Processing:*"
 				},
 				{
 					"type": "plain_text",
-					"text": "%%posts%%",
-					"emoji": true
-				},
-				{
-					"type": "plain_text",
-					"text": "%%canvas%%",
+					"text": "{current}",
 					"emoji": true
 				}
 			]
@@ -44,20 +35,43 @@
 			"fields": [
 				{
 					"type": "mrkdwn",
-					"text": "*Replies*"
+					"text": "*Participants*"
 				},
 				{
 					"type": "mrkdwn",
-					"text": "*Now Processing*"
+					"text": "*Canvas*"
 				},
 				{
 					"type": "plain_text",
-					"text": "%%replies%%",
+					"text": "{users}",
 					"emoji": true
 				},
 				{
 					"type": "plain_text",
-					"text": "%%current%%",
+					"text": "{canvas}",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Posts*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Replies*"
+				},
+				{
+					"type": "plain_text",
+					"text": "{posts}",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "{replies}",
 					"emoji": true
 				}
 			]

@@ -302,11 +302,26 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
     # ---------------------------------------
 
     # 2. get ALL users and filter out the bots so we only have _real_ users ✅
+    if canvas:
+        canvas_result = "Pending..."
+    else:
+        canvas_result = "Not selected"
+
+    loading_modal_data = {
+        "users": "Processing...",
+        "posts":"Calculating...",
+        "replies":"Calculating...",
+        "canvas":canvas_result,
+        "current":f":mag: Validating {channel_info['num_members']} channel members (including bots, apps and workflows)."
+    }
+    loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
+    client.views_update(view_id=view_id, view=loading_view)
     humans = channel.get_users(
         client=client,
         channel_id=channel_id
     )
-    # logger.info(humans)
+    
+    logger.info(f"RETRIEVED {len(humans)} HUMANS")
 
     # get a random number of users based on the participants value
     member_range = helper.parse_range(num_participants)
@@ -316,6 +331,16 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
         participants = random.sample(humans, len(humans))
 
     # ---------------------------------------
+
+    # loading_modal_data = {
+    #     "users": len(participants),
+    #     "posts":"Calculating...",
+    #     "replies":"Calculating...",
+    #     "canvas":canvas_result,
+    #     "current":"Validating users"
+    # }
+    # loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
+    # client.views_update(view_id=view_id, view=loading_view)
 
     # 3. Update the channel topic and description if required
     logger.info(f"CHANNEL INFO: {channel_info}")
@@ -336,14 +361,22 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
     # ----------------------------------------
 
     # 4. Update/create the canvas if required
-    canvas_result = "Not selected"
+    
     if canvas: 
-        loading_view = helper.loading_formatter(
-            posts="Calculating...",
-            replies="Calculating...",
-            canvas="Generating...",
-            current="Designing canvas"
-        )
+        # loading_view = helper.loading_formatter(
+        #     posts="Calculating...",
+        #     replies="Calculating...",
+        #     canvas="Generating...",
+        #     current="Designing canvas"
+        # )
+        loading_modal_data = {
+            "users": len(participants),
+            "posts":"Calculating...",
+            "replies":"Calculating...",
+            "canvas":"Generating...",
+            "current":":writing_hand: Designing canvas"
+        }
+        loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
         client.views_update(view_id=view_id, view=loading_view)
 
         # 4a. select up to 5 random users to show up as mentions in the canvas
@@ -383,12 +416,21 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
         except Exception as e:
             canvas_result = "Error"
             logger.error(f"Error creating canvas: {e}")
-            loading_view = helper.loading_formatter(
-                posts="Calculating...",
-                replies="Calculating...",
-                canvas=canvas_result,
-                current="Generating replies"
-            )
+            # loading_view = helper.loading_formatter(
+            #     posts="Calculating...",
+            #     replies="Calculating...",
+            #     canvas=canvas_result,
+            #     current="Generating replies"
+            # )
+            # client.views_update(view_id=view_id, view=loading_view)
+            loading_modal_data = {
+                "users": len(participants),
+                "posts":"Calculating...",
+                "replies":"Calculating...",
+                "canvas":canvas_result,
+                "current":":speech_balloon: Generating messages"
+            }
+            loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
             client.views_update(view_id=view_id, view=loading_view)
 
 
@@ -408,22 +450,40 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
         "replies": 0
     }
 
-    loading_view = helper.loading_formatter(
-        posts=f"0/{total_posts}",
-        replies="Calculating...",
-        canvas=canvas_result,
-        current="Generating messages"
-    )
+    # loading_view = helper.loading_formatter(
+    #     posts=f"0/{total_posts}",
+    #     replies="Calculating...",
+    #     canvas=canvas_result,
+    #     current="Generating messages"
+    # )
+    # client.views_update(view_id=view_id, view=loading_view)
+    loading_modal_data = {
+        "users": len(participants),
+        "posts":f"0/{total_posts}",
+        "replies":"Calculating...",
+        "canvas":canvas_result,
+        "current":":speech_balloon: Generating messages"
+    }
+    loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
     client.views_update(view_id=view_id, view=loading_view)
 
     for _ in range(total_posts):
         if data_counter["posts"] > 0:
-            loading_view = helper.loading_formatter(
-                posts=f"{data_counter['posts']}/{total_posts}",
-                replies=f"{data_counter['replies']} so far",
-                canvas=canvas_result,
-                current="Generating message"
-            )
+            # loading_view = helper.loading_formatter(
+            #     posts=f"{data_counter['posts']}/{total_posts}",
+            #     replies=f"{data_counter['replies']} so far",
+            #     canvas=canvas_result,
+            #     current="Generating message"
+            # )
+            # client.views_update(view_id=view_id, view=loading_view)
+            loading_modal_data = {
+                "users": len(participants),
+                "posts":f"{data_counter['posts']}/{total_posts}",
+                "replies":f"{data_counter['replies']} so far",
+                "canvas":canvas_result,
+                "current":":speech_balloon: Generating message"
+            }
+            loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
             client.views_update(view_id=view_id, view=loading_view)
 
         # 5a. Fetch a post
@@ -482,12 +542,21 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
                 message_ts=message_result["ts"],
                 reacji=message_content["reacjis"]
             )
-            loading_view = helper.loading_formatter(
-                posts=f"{data_counter['posts']}/{total_posts}",
-                replies=f"{data_counter['replies']} so far",
-                canvas=canvas_result,
-                current="Generating replies"
-            )
+            # loading_view = helper.loading_formatter(
+            #     posts=f"{data_counter['posts']}/{total_posts}",
+            #     replies=f"{data_counter['replies']} so far",
+            #     canvas=canvas_result,
+            #     current="Generating replies"
+            # )
+            # client.views_update(view_id=view_id, view=loading_view)
+            loading_modal_data = {
+                "users": len(participants),
+                "posts":f"{data_counter['posts']}/{total_posts}",
+                "replies":f"{data_counter['replies']} so far",
+                "canvas":canvas_result,
+                "current":":speech_balloon: Generating replies"
+            }
+            loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
             client.views_update(view_id=view_id, view=loading_view)
 
         total_replies = helper.rand_from_range_string(thread_replies)
@@ -528,14 +597,22 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
 
                 if "ok" in replies_result and replies_result["ok"]:
                     data_counter["replies"] += 1
-                    loading_view = helper.loading_formatter(
-                        posts=f"{data_counter['posts']}/{total_posts}",
-                        replies=f"{data_counter['replies']} so far",
-                        canvas=canvas_result,
-                        current="Generating replies"
-                    )
+                    # loading_view = helper.loading_formatter(
+                    #     posts=f"{data_counter['posts']}/{total_posts}",
+                    #     replies=f"{data_counter['replies']} so far",
+                    #     canvas=canvas_result,
+                    #     current="Generating replies"
+                    # )
+                    # client.views_update(view_id=view_id, view=loading_view)
+                    loading_modal_data = {
+                        "users": len(participants),
+                        "posts":f"{data_counter['posts']}/{total_posts}",
+                        "replies":f"{data_counter['replies']} so far",
+                        "canvas":canvas_result,
+                        "current":":speech_balloon: Generating replies"
+                    }
+                    loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
                     client.views_update(view_id=view_id, view=loading_view)
-
                     message.send_reacjis(
                         client=client,
                         channel_id=channel_id,
@@ -604,7 +681,7 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
                         },
                         {
                             "type": "mrkdwn",
-                            "text": f"*Participants:* {num_participants}"
+                            "text": f"*Participants:* {len(participants)}"
                         }
                     ]
                 },
