@@ -62,7 +62,7 @@ def get_users(client: WebClient, channel_id: str, exclude_bots: bool = True):
         member_list = []
         for member_id in members["members"]:
             member_info = client.users_info(user=member_id)["user"]
-            if exclude_bots and member_info["is_bot"]:
+            if (exclude_bots and member_info["is_bot"]) or member_info.get('deleted', False):
                 continue
             member_list.append(member_info)
         return member_list
