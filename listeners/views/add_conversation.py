@@ -307,20 +307,52 @@ def conversation_generate(ack: Ack, body, client: WebClient, view, logger: Logge
     else:
         canvas_result = "Not selected"
 
+    # Initialize counter
+    processed = 0
+    total_members = channel_info['num_members']
+
+    # Show initial loading state
     loading_modal_data = {
         "users": "Processing...",
-        "posts":"Calculating...",
-        "replies":"Calculating...",
-        "canvas":canvas_result,
-        "current":f":mag: Validating {channel_info['num_members']} channel members (including bots, apps and workflows)."
+        "posts": "Calculating...",
+        "replies": "Calculating...",
+        "canvas": canvas_result,
+        "current": f":mag: Checking channel members (0/{total_members})"
     }
     loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
     client.views_update(view_id=view_id, view=loading_view)
-    humans = channel.get_users(
-        client=client,
-        channel_id=channel_id
-    )
-    
+
+    # Get users with progress updates
+    humans = []
+    members_response = client.conversations_members(channel=channel_id)
+    for member_id in members_response["members"]:
+        user_info = client.users_info(user=member_id)["user"]
+        if not user_info.get("is_bot", False):
+            humans.append(user_info)
+        
+        processed += 1
+        if processed % 10 == 0:  # Update every 10 users
+            loading_modal_data = {
+                "users": "Processing...",
+                "posts": "Calculating...",
+                "replies": "Calculating...",
+                "canvas": canvas_result,
+                "current": f":mag: Checking channel members ({processed}/{total_members})"
+            }
+            loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
+            client.views_update(view_id=view_id, view=loading_view)
+
+    # Show final count
+    loading_modal_data = {
+        "users": f"{len(humans)} users found",
+        "posts": "Calculating...",
+        "replies": "Calculating...",
+        "canvas": canvas_result,
+        "current": f":white_check_mark: Found {len(humans)} human users"
+    }
+    loading_view = helper.render_block_kit(template="loading_details.json", data=loading_modal_data)
+    client.views_update(view_id=view_id, view=loading_view)
+
     logger.info(f"RETRIEVED {len(humans)} HUMANS")
 
     # get a random number of users based on the participants value
