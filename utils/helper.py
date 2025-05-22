@@ -50,7 +50,12 @@ def loading_formatter(posts:str, replies: str, canvas: str, current: str):
     return json.loads(content)
 
 
-def render_block_kit(template, data):
+def render_block_kit(template: str|dict, data):
+    if isinstance(template, str) and template.endswith(".json"):
+        view_path = os.path.join("block_kit", template)
+        with open(view_path, 'r') as file:
+            template = json.load(file)
+
     json_string = json.dumps(template)
     for key, value in data.items():
         # if isinstance(value, str):
