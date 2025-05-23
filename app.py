@@ -182,9 +182,14 @@ def server_error(e):
 @flask_app.route("/assets/<path:filename>")
 def serve_static(filename):
     try:
+        logger.info(f"Attempting to serve static file: {filename}")
         return send_from_directory('block_kit/assets', filename, cache_timeout=2592000)
     except FileNotFoundError:
+        logger.error(f"File not found: {filename}")
         abort(404)
+    except Exception as e:
+        logger.error(f"Error serving static file {filename}: {str(e)}", exc_info=True)
+        abort(500)
 
 # Start Bolt app
 if __name__ == "__main__":
