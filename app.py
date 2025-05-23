@@ -183,7 +183,7 @@ def server_error(e):
 def serve_static(filename):
     try:
         logger.info(f"Attempting to serve static file: {filename}")
-        return send_from_directory('block_kit/assets', filename, cache_timeout=2592000)
+        return send_from_directory('block_kit/assets', filename, max_age=2592000)
     except FileNotFoundError:
         logger.error(f"File not found: {filename}")
         abort(404)
