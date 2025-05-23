@@ -12,9 +12,15 @@ from datetime import timedelta
 from functools import lru_cache
 
 # Cache for modal templates to avoid repeated file reads
-@lru_cache(maxsize=32)
+# @lru_cache(maxsize=32)
+# def load_modal_template(template_name: str) -> dict:
+#     """Load and cache modal templates from JSON files."""
+#     view_path = os.path.join("block_kit", f"{template_name}.json")
+#     with open(view_path, 'r') as file:
+#         return json.load(file)
+
 def load_modal_template(template_name: str) -> dict:
-    """Load and cache modal templates from JSON files."""
+    """Load modal templates from JSON files."""
     view_path = os.path.join("block_kit", f"{template_name}.json")
     with open(view_path, 'r') as file:
         return json.load(file)
