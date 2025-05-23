@@ -9,7 +9,7 @@ from slack_sdk.oauth.installation_store.sqlalchemy import SQLAlchemyInstallation
 from slack_sdk.oauth.state_store.sqlalchemy import SQLAlchemyOAuthStateStore
 import sqlalchemy
 from sqlalchemy.engine import Engine
-from flask import Flask, request, jsonify, Response, render_template, redirect, send_from_directory
+from flask import Flask, request, jsonify, Response, render_template, redirect, send_from_directory, abort
 from slack_bolt.request import BoltRequest
 import requests
 
@@ -179,9 +179,12 @@ def server_error(e):
     logger.error(f"500 error: {e}")
     return render_template('500.html'), 500
 
-@flask_app.route("/assets/<path:path>")
-def serve_static(path):
-    return send_from_directory('assets', path, cache_timeout=2592000)
+@flask_app.route("/assets/<path:filename>")
+def serve_static(filename):
+    try:
+        return send_from_directory('block_kit/assets', filename, cache_timeout=2592000)
+    except FileNotFoundError:
+        abort(404)
 
 # Start Bolt app
 if __name__ == "__main__":
