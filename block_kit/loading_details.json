@@ -13,7 +13,7 @@
 	"blocks": [
 		{
 			"type": "image",
-			"image_url": "https://cdn.dribbble.com/userupload/23743704/file/original-0034aa5191749c11e4be1a9ba56ec51b.gif",
+			"image_url": "https://https://converse-2-dev-d0bd7fe3d3f1.herokuapp.com/assets/loading_animation.gif",
 			"alt_text": "loading..."
 		},
 		{
